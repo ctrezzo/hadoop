@@ -1376,6 +1376,27 @@
     <value>720</value>
   </property>
 
+  <property>
+    <description>The frequency at which a cleaner task runs.
+    Specified in minutes.</description>
+    <name>yarn.sharedcache.cleaner.period</name>
+    <value>1440</value>
+  </property>
+
+  <property>
+    <description>Initial delay before the first cleaner task is scheduled.
+    Specified in minutes.</description>
+    <name>yarn.sharedcache.cleaner.initial-delay</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The time to sleep between processing each shared cache
+    resource. Specified in milliseconds.</description>
+    <name>yarn.sharedcache.cleaner.resource-sleep</name>
+    <value>0</value>
+  </property>
+
   <!-- Other configuration -->
   <property>
     <description>The interval that the yarn client library uses to poll the

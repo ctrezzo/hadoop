@@ -1374,6 +1374,34 @@ public class YarnConfiguration extends Configuration {
   public static final String IN_MEMORY_CHECK_PERIOD =
       IN_MEMORY_STORE_PREFIX + "check-period";
   public static final int DEFAULT_IN_MEMORY_CHECK_PERIOD = 12 * 60;
+  
+  // SCM Cleaner service configuration
+
+  private static final String SCM_CLEANER_PREFIX = SHARED_CACHE_PREFIX
+      + "cleaner.";
+
+  /**
+   * The frequency at which a cleaner task runs. Specified in minutes.
+   */
+  public static final String SCM_CLEANER_PERIOD =
+      SCM_CLEANER_PREFIX + "period";
+  public static final int DEFAULT_SCM_CLEANER_PERIOD = 24 * 60;
+
+  /**
+   * Initial delay before the first cleaner task is scheduled. Specified in
+   * minutes.
+   */
+  public static final String SCM_CLEANER_INITIAL_DELAY =
+      SCM_CLEANER_PREFIX + "initial-delay";
+  public static final int DEFAULT_SCM_CLEANER_INITIAL_DELAY = 10;
+
+  /**
+   * The time to sleep between processing each shared cache resource. Specified
+   * in milliseconds.
+   */
+  public static final String SCM_CLEANER_RESOURCE_SLEEP =
+      SCM_CLEANER_PREFIX + "resource-sleep";
+  public static final long DEFAULT_SCM_CLEANER_RESOURCE_SLEEP = 0L;
 
   ////////////////////////////////
   // Other Configs
