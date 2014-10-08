@@ -243,10 +243,11 @@ class CleanerTask implements Runnable {
       if (store.isResourceEvictable(key, resource)) {
         try {
           /*
-           * TODO: There is a race condition between store.removeResource(key)
-           * and removeResourceFromCacheFileSystem(path) operations because they
-           * do not happen atomically and resources can be uploaded with
-           * different file names by the node managers.
+           * TODO See YARN-2663: There is a race condition between
+           * store.removeResource(key) and
+           * removeResourceFromCacheFileSystem(path) operations because they do
+           * not happen atomically and resources can be uploaded with different
+           * file names by the node managers.
            */
           // remove the resource from scm (checks for appIds as well)
           if (store.removeResource(key)) {
