@@ -129,6 +129,9 @@ Trunk (Unreleased)
     HADOOP-11092. hadoop shell commands should print usage if not given a
     a class (aw)
 
+    HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
+    Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -356,9 +359,6 @@ Release 2.7.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HADOOP-10404. Some accesses to DomainSocketWatcher#closed are not protected
-    by the lock (cmccabe)
 
     HADOOP-11166. Remove ulimit from test-patch.sh. (wang)
 
@@ -807,6 +807,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11169. Fix DelegationTokenAuthenticatedURL to pass the connection
     Configurator to the authenticator. (Arun Suresh via wang)
+
+    HADOOP-10404. Some accesses to DomainSocketWatcher#closed are not protected
+    by the lock (cmccabe)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
