@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -48,7 +47,7 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourc
 @Private
 @Evolving
 class CleanerTask implements Runnable {
-  public static final String RENAMED_SUFFIX = "-renamed";
+  private static final String RENAMED_SUFFIX = "-renamed";
   private static final Log LOG = LogFactory.getLog(CleanerTask.class);
 
   private final String location;
@@ -85,8 +84,8 @@ class CleanerTask implements Runnable {
               YarnConfiguration.DEFAULT_SHARED_CACHE_ROOT);
 
       long sleepTime =
-          conf.getLong(YarnConfiguration.SCM_CLEANER_RESOURCE_SLEEP,
-              YarnConfiguration.DEFAULT_SCM_CLEANER_RESOURCE_SLEEP);
+          conf.getLong(YarnConfiguration.SCM_CLEANER_RESOURCE_SLEEP_MS,
+              YarnConfiguration.DEFAULT_SCM_CLEANER_RESOURCE_SLEEP_MS);
       int nestedLevel = SharedCacheUtil.getCacheDepth(conf);
       FileSystem fs = FileSystem.get(conf);
 
@@ -117,6 +116,7 @@ class CleanerTask implements Runnable {
     this.isScheduledTask = isScheduledTask;
   }
 
+  @Override
   public void run() {
     // check if it is a scheduled task
     if (isScheduledTask
@@ -157,16 +157,12 @@ class CleanerTask implements Runnable {
       // now traverse individual directories and process them
       // the directory structure is specified by the nested level parameter
       // (e.g. 9/c/d/<checksum>)
-      StringBuilder pattern = new StringBuilder();
-      for (int i = 0; i < nestedLevel; i++) {
-        pattern.append("*/");
-      }
-      pattern.append("*");
+      String pattern = SharedCacheUtil.getCacheEntryGlobPattern(nestedLevel);
       FileStatus[] resources =
-          fs.globStatus(new Path(root, pattern.toString()));
+          fs.globStatus(new Path(root, pattern));
       int numResources = resources == null ? 0 : resources.length;
       LOG.info("Processing " + numResources + " resources in the shared cache");
-      long beginNano = System.nanoTime();
+      long beginMs = System.currentTimeMillis();
       if (resources != null) {
         for (FileStatus resource : resources) {
           // check for interruption so it can abort in a timely manner in case
@@ -189,10 +185,9 @@ class CleanerTask implements Runnable {
           }
         }
       }
-      long endNano = System.nanoTime();
-      long durationMs = TimeUnit.NANOSECONDS.toMillis(endNano - beginNano);
-      LOG.info("Processed " + numResources + " resource(s) in " + durationMs
-          +
+      long endMs = System.currentTimeMillis();
+      long durationMs = endMs - beginMs;
+      LOG.info("Processed " + numResources + " resource(s) in " + durationMs +
           " ms.");
     } catch (IOException e1) {
       LOG.error("Unable to complete the cleaner task", e1);

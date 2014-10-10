@@ -42,7 +42,7 @@ public class TestCleanerTask {
   private static final String ROOT =
       YarnConfiguration.DEFAULT_SHARED_CACHE_ROOT;
   private static final long SLEEP_TIME =
-      YarnConfiguration.DEFAULT_SCM_CLEANER_RESOURCE_SLEEP;
+      YarnConfiguration.DEFAULT_SCM_CLEANER_RESOURCE_SLEEP_MS;
   private static final int NESTED_LEVEL =
       YarnConfiguration.DEFAULT_SHARED_CACHE_NESTED_LEVEL;
 

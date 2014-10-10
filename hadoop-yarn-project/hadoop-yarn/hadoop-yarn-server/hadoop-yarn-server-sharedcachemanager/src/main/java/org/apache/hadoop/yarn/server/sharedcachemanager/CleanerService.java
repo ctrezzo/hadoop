@@ -52,10 +52,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @Evolving
 public class CleanerService extends CompositeService {
   /**
-   * Priority of the cleaner shutdown hook.
-   */
-  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
-  /**
    * The name of the global cleaner lock that the cleaner creates to indicate
    * that a cleaning process is in progress.
    */
@@ -66,14 +62,14 @@ public class CleanerService extends CompositeService {
   private Configuration conf;
   private AppChecker appChecker;
   private CleanerMetrics metrics;
-  private ScheduledExecutorService scheduler;
+  private ScheduledExecutorService scheduledExecutor;
   private final SCMStore store;
   private final AtomicBoolean cleanerTaskRunning;
 
   public CleanerService(SCMStore store) {
     super("CleanerService");
     this.store = store;
-    this.cleanerTaskRunning = new AtomicBoolean();
+    this.cleanerTaskRunning = new AtomicBoolean(false);
   }
 
   @Override
@@ -86,14 +82,15 @@ public class CleanerService extends CompositeService {
     // create a single threaded scheduler service that services the cleaner task
     ThreadFactory tf =
         new ThreadFactoryBuilder().setNameFormat("Shared cache cleaner").build();
-    scheduler = Executors.newSingleThreadScheduledExecutor(tf);
+    scheduledExecutor = Executors.newSingleThreadScheduledExecutor(tf);
     super.serviceInit(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
     if (!writeGlobalCleanerPidFile()) {
-      throw new YarnException("The global cleaner pid file already exists!");
+      throw new YarnException("The global cleaner pid file already exists! " +
+          "It appears there is another CleanerService running in the cluster");
     }
 
     this.metrics = CleanerMetrics.initSingleton(conf);
@@ -105,8 +102,8 @@ public class CleanerService extends CompositeService {
         CleanerTask.create(conf, appChecker, store, metrics,
             cleanerTaskRunning, true);
     long periodInMinutes = getPeriod(conf);
-    scheduler.scheduleAtFixedRate(task, getInitialDelay(conf), periodInMinutes,
-        TimeUnit.MINUTES);
+    scheduledExecutor.scheduleAtFixedRate(task, getInitialDelay(conf),
+        periodInMinutes, TimeUnit.MINUTES);
     LOG.info("Scheduled the shared cache cleaner task to run every "
         + periodInMinutes + " minutes.");
   }
@@ -114,16 +111,17 @@ public class CleanerService extends CompositeService {
   @Override
   protected void serviceStop() throws Exception {
     LOG.info("Shutting down the background thread.");
-    scheduler.shutdownNow();
+    scheduledExecutor.shutdownNow();
     try {
-      if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+      if (scheduledExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+        LOG.info("The background thread stopped.");
+      } else {
         LOG.warn("Gave up waiting for the cleaner task to shutdown.");
       }
     } catch (InterruptedException e) {
       LOG.warn("The cleaner service was interrupted while shutting down the task.",
           e);
     }
-    LOG.info("The background thread stopped.");
 
     removeGlobalCleanerPidFile();
 
@@ -154,7 +152,7 @@ public class CleanerService extends CompositeService {
             cleanerTaskRunning, false);
     // this is a non-blocking call (it simply submits the task to the executor
     // queue and returns)
-    this.scheduler.execute(task);
+    this.scheduledExecutor.execute(task);
     /*
      * We return true if the task is accepted for execution by the executor. Two
      * notes: 1. There is a small race here between a scheduled task and an
@@ -224,8 +222,8 @@ public class CleanerService extends CompositeService {
 
   private static int getInitialDelay(Configuration conf) {
     int initialDelayInMinutes =
-        conf.getInt(YarnConfiguration.SCM_CLEANER_INITIAL_DELAY,
-            YarnConfiguration.DEFAULT_SCM_CLEANER_INITIAL_DELAY);
+        conf.getInt(YarnConfiguration.SCM_CLEANER_INITIAL_DELAY_MINS,
+            YarnConfiguration.DEFAULT_SCM_CLEANER_INITIAL_DELAY_MINS);
     // negative value is invalid; use the default
     if (initialDelayInMinutes < 0) {
       throw new HadoopIllegalArgumentException("Negative initial delay value: "
@@ -237,8 +235,8 @@ public class CleanerService extends CompositeService {
 
   private static int getPeriod(Configuration conf) {
     int periodInMinutes =
-        conf.getInt(YarnConfiguration.SCM_CLEANER_PERIOD,
-            YarnConfiguration.DEFAULT_SCM_CLEANER_PERIOD);
+        conf.getInt(YarnConfiguration.SCM_CLEANER_PERIOD_MINS,
+            YarnConfiguration.DEFAULT_SCM_CLEANER_PERIOD_MINS);
     // non-positive value is invalid; use the default
     if (periodInMinutes <= 0) {
       throw new HadoopIllegalArgumentException("Non-positive period value: "

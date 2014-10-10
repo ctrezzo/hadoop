@@ -159,7 +159,7 @@ public class CleanerMetrics {
     return errorRate.value();
   }
 
-  CleanerMetrics() {
+  private CleanerMetrics() {
   }
 
   /**

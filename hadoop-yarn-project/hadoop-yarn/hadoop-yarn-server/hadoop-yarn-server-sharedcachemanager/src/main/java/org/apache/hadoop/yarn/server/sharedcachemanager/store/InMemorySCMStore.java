@@ -201,14 +201,10 @@ public class InMemorySCMStore extends SCMStore {
     // now traverse individual directories and process them
     // the directory structure is specified by the nested level parameter
     // (e.g. 9/c/d/<checksum>/file)
-    StringBuilder pattern = new StringBuilder();
-    for (int i = 0; i < nestedLevel + 1; i++) {
-      pattern.append("*/");
-    }
-    pattern.append("*");
+    String pattern = SharedCacheUtil.getCacheEntryGlobPattern(nestedLevel+1);
 
     LOG.info("Querying for all individual cached resource files");
-    FileStatus[] entries = fs.globStatus(new Path(root, pattern.toString()));
+    FileStatus[] entries = fs.globStatus(new Path(root, pattern));
     int numEntries = entries == null ? 0 : entries.length;
     LOG.info("Found " + numEntries + " files: processing for one resource per "
         + "key");
@@ -427,8 +423,8 @@ public class InMemorySCMStore extends SCMStore {
 
   private static int getStalenessPeriod(Configuration conf) {
     int stalenessMinutes =
-        conf.getInt(YarnConfiguration.IN_MEMORY_STALENESS_PERIOD,
-            YarnConfiguration.DEFAULT_IN_MEMORY_STALENESS_PERIOD);
+        conf.getInt(YarnConfiguration.IN_MEMORY_STALENESS_PERIOD_MINS,
+            YarnConfiguration.DEFAULT_IN_MEMORY_STALENESS_PERIOD_MINS);
     // non-positive value is invalid; use the default
     if (stalenessMinutes <= 0) {
       throw new HadoopIllegalArgumentException("Non-positive staleness value: "
@@ -440,8 +436,8 @@ public class InMemorySCMStore extends SCMStore {
 
   private static int getInitialDelay(Configuration conf) {
     int initialMinutes =
-        conf.getInt(YarnConfiguration.IN_MEMORY_INITIAL_DELAY,
-            YarnConfiguration.DEFAULT_IN_MEMORY_INITIAL_DELAY);
+        conf.getInt(YarnConfiguration.IN_MEMORY_INITIAL_DELAY_MINS,
+            YarnConfiguration.DEFAULT_IN_MEMORY_INITIAL_DELAY_MINS);
     // non-positive value is invalid; use the default
     if (initialMinutes <= 0) {
       throw new HadoopIllegalArgumentException(
@@ -453,8 +449,8 @@ public class InMemorySCMStore extends SCMStore {
 
   private static int getCheckPeriod(Configuration conf) {
     int checkMinutes =
-        conf.getInt(YarnConfiguration.IN_MEMORY_CHECK_PERIOD,
-            YarnConfiguration.DEFAULT_IN_MEMORY_CHECK_PERIOD);
+        conf.getInt(YarnConfiguration.IN_MEMORY_CHECK_PERIOD_MINS,
+            YarnConfiguration.DEFAULT_IN_MEMORY_CHECK_PERIOD_MINS);
     // non-positive value is invalid; use the default
     if (checkMinutes <= 0) {
       throw new HadoopIllegalArgumentException(
