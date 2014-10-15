@@ -26,10 +26,6 @@ import org.junit.Test;
 public class TestCleanerMetrics {
 
   Configuration conf = new Configuration();
-  long currTime = System.currentTimeMillis();
-  // it is float to allow floating point rate calculation
-  float lastDuration = 0;
-  float totalDurations = 0;
   CleanerMetrics cleanerMetrics;
 
   @Before
@@ -42,22 +38,16 @@ public class TestCleanerMetrics {
   public void testMetricsOverMultiplePeriods() {
     simulateACleanerRun();
     assertMetrics(4, 4, 1, 1);
-    currTime += 1300;
     simulateACleanerRun();
     assertMetrics(4, 8, 1, 2);
   }
 
   public void simulateACleanerRun() {
-    long startTime = currTime;
-    cleanerMetrics.reportCleaningStart(currTime);
-    currTime += 9;
-    cleanerMetrics.reportAFileProcess(currTime);
-    cleanerMetrics.reportAFileDelete(currTime);
-    currTime++;
-    cleanerMetrics.reportAFileProcess(currTime);
-    cleanerMetrics.reportAFileProcess(currTime);
-    lastDuration = currTime - startTime;
-    totalDurations += lastDuration;
+    cleanerMetrics.reportCleaningStart();
+    cleanerMetrics.reportAFileProcess();
+    cleanerMetrics.reportAFileDelete();
+    cleanerMetrics.reportAFileProcess();
+    cleanerMetrics.reportAFileProcess();
   }
 
   void assertMetrics(int proc, int totalProc, int del, int totalDel) {
@@ -71,22 +61,5 @@ public class TestCleanerMetrics {
         cleanerMetrics.getDeletedFiles());
     assertEquals("Total deleted files are not measured correctly",
         totalDel, cleanerMetrics.getTotalDeletedFiles());
-
-    assertEquals(
-            "Rate of processed files in the last period are not measured correctly",
-            CleanerMetrics.ratePerMsToHour(proc / lastDuration),
-            cleanerMetrics.getProcessRate());
-    assertEquals(
-        "Rate of total processed files are not measured correctly",
-        CleanerMetrics.ratePerMsToHour(totalProc / totalDurations),
-        cleanerMetrics.getTotalProcessRate());
-    assertEquals(
-        "Rate of deleted files in the last period are not measured correctly",
-        CleanerMetrics.ratePerMsToHour(del / lastDuration),
-        cleanerMetrics.getDeleteRate());
-    assertEquals(
-        "Rate of total deleted files are not measured correctly",
-        CleanerMetrics.ratePerMsToHour(totalDel / totalDurations),
-        cleanerMetrics.getTotalDeleteRate());
   }
 }

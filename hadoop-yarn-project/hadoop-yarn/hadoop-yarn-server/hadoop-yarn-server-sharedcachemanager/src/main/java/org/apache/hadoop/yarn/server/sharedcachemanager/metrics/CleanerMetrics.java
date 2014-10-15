@@ -117,48 +117,6 @@ public class CleanerMetrics {
     return fileErrors.value();
   }
 
-  private @Metric("Rate of deleting the files over all runs")
-  MutableGaugeInt totalDeleteRate;
-
-  public int getTotalDeleteRate() {
-    return totalDeleteRate.value();
-  }
-
-  private @Metric("Rate of deleting the files over the last run")
-  MutableGaugeInt deleteRate;
-
-  public int getDeleteRate() {
-    return deleteRate.value();
-  }
-
-  private @Metric("Rate of prcessing the files over all runs")
-  MutableGaugeInt totalProcessRate;
-
-  public int getTotalProcessRate() {
-    return totalProcessRate.value();
-  }
-
-  private @Metric("Rate of prcessing the files over the last run")
-  MutableGaugeInt processRate;
-
-  public int getProcessRate() {
-    return processRate.value();
-  }
-
-  private @Metric("Rate of file errors over all runs")
-  MutableGaugeInt totalErrorRate;
-
-  public int getTotalErrorRate() {
-    return totalErrorRate.value();
-  }
-
-  private @Metric("Rate of file errors over the last run")
-  MutableGaugeInt errorRate;
-
-  public int getErrorRate() {
-    return errorRate.value();
-  }
-
   private CleanerMetrics() {
   }
 
@@ -166,25 +124,6 @@ public class CleanerMetrics {
    * The metric source obtained after parsing the annotations
    */
   MetricsSource metricSource;
-
-  /**
-   * The start of the last run of cleaner is ms
-   */
-  private AtomicLong lastRunStart = new AtomicLong(System.currentTimeMillis());
-
-  /**
-   * The end of the last run of cleaner is ms
-   */
-  private AtomicLong lastRunEnd = new AtomicLong(System.currentTimeMillis());
-
-  /**
-   * The sum of the durations of the last runs
-   */
-  private AtomicLong sumOfPastPeriods = new AtomicLong(0);
-
-  public MetricsSource getMetricSource() {
-    return metricSource;
-  }
 
   static CleanerMetrics create(Configuration conf) {
     MetricsSystem ms = DefaultMetricsSystem.instance();
@@ -201,119 +140,38 @@ public class CleanerMetrics {
    * Report a delete operation at the current system time
    */
   public void reportAFileDelete() {
-    long time = System.currentTimeMillis();
-    reportAFileDelete(time);
-  }
-
-  /**
-   * Report a delete operation at the specified time.
-   * Delete implies process as well.
-   * @param time
-   */
-  public void reportAFileDelete(long time) {
     totalProcessedFiles.incr();
     processedFiles.incr();
     totalDeletedFiles.incr();
     deletedFiles.incr();
-    updateRates(time);
-    lastRunEnd.set(time);
   }
 
   /**
    * Report a process operation at the current system time
    */
   public void reportAFileProcess() {
-    long time = System.currentTimeMillis();
-    reportAFileProcess(time);
-  }
-
-  /**
-   * Report a process operation at the specified time
-   * 
-   * @param time
-   */
-  public void reportAFileProcess(long time) {
     totalProcessedFiles.incr();
     processedFiles.incr();
-    updateRates(time);
-    lastRunEnd.set(time);
   }
 
   /**
    * Report a process operation error at the current system time
    */
   public void reportAFileError() {
-    long time = System.currentTimeMillis();
-    reportAFileError(time);
-  }
-
-  /**
-   * Report a process operation error at the specified time
-   * 
-   * @param time
-   */
-  public void reportAFileError(long time) {
     totalProcessedFiles.incr();
     processedFiles.incr();
     totalFileErrors.incr();
     fileErrors.incr();
-    updateRates(time);
-    lastRunEnd.set(time);
-  }
-
-  private void updateRates(long time) {
-    long startTime = lastRunStart.get();
-    long lastPeriod = time - startTime;
-    long sumPeriods = sumOfPastPeriods.get() + lastPeriod;
-    float lastRunProcessRate = ((float) processedFiles.value()) / lastPeriod;
-    processRate.set(ratePerMsToHour(lastRunProcessRate));
-    float totalProcessRateMs = ((float) totalProcessedFiles.value()) / sumPeriods;
-    totalProcessRate.set(ratePerMsToHour(totalProcessRateMs));
-    float lastRunDeleteRate = ((float) deletedFiles.value()) / lastPeriod;
-    deleteRate.set(ratePerMsToHour(lastRunDeleteRate));
-    float totalDeleteRateMs = ((float) totalDeletedFiles.value()) / sumPeriods;
-    totalDeleteRate.set(ratePerMsToHour(totalDeleteRateMs));
-    float lastRunErrorRateMs = ((float) fileErrors.value()) / lastPeriod;
-    errorRate.set(ratePerMsToHour(lastRunErrorRateMs));
-    float totalErrorRateMs = ((float) totalFileErrors.value()) / sumPeriods;
-    totalErrorRate.set(ratePerMsToHour(totalErrorRateMs));
   }
 
   /**
-   * Report the start a new run of the cleaner at the current system time
+   * Report the start a new run of the cleaner.
+   *
    */
   public void reportCleaningStart() {
-    long time = System.currentTimeMillis();
-    reportCleaningStart(time);
-  }
-
-  /**
-   * Report the start a new run of the cleaner at the specified time
-   * 
-   * @param time
-   */
-  public void reportCleaningStart(long time) {
-    long lastPeriod = lastRunEnd.get() - lastRunStart.get();
-    if (lastPeriod < 0) {
-      LOG.error("No operation since last start!");
-      lastPeriod = 0;
-    }
-    lastRunStart.set(time);
     processedFiles.set(0);
     deletedFiles.set(0);
-    processRate.set(0);
-    deleteRate.set(0);
-    errorRate.set(0);
-    sumOfPastPeriods.addAndGet(lastPeriod);
-    registry.tag(SessionId, Long.toString(time), true);
+    fileErrors.set(0);
   }
 
-  static int ratePerMsToHour(float ratePerMs) {
-    float ratePerHour = ratePerMs * 1000 * 3600;
-    return (int) ratePerHour;
-  }
-
-  public static boolean isCleanerMetricRecord(String name) {
-    return (name.startsWith("cleaner"));
-  }
 }
