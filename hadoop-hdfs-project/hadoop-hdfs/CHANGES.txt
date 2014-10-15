@@ -128,8 +128,6 @@ Trunk (Unreleased)
 
     HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
 
-    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
-
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
 
@@ -249,9 +247,6 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-    HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
-    (Vinayakumar B via wheat 9)
-
     HDFS-6694. TestPipelinesFailover.testPipelineRecoveryStress tests fail
     intermittently with various symptoms - debugging patch. (Yongjun Zhang via
     Arpit Agarwal)
@@ -360,6 +355,9 @@ Trunk (Unreleased)
     HDFS-7112. LazyWriter should use either async IO or one thread per physical
     disk. (Xiaoyu Yao via cnauroth)
 
+    HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
+    (Xiaoyu Yao via cnauroth)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -373,12 +371,30 @@ Release 2.7.0 - UNRELEASED
     HDFS-7186. Document the "hadoop trace" command. (Masatake Iwasaki via Colin
     P. McCabe)
 
+    HDFS-7202. Should be able to omit package name of SpanReceiver on "hadoop
+    trace -add" (iwasakims via cmccabe)
+
+    HDFS-7026. Introduce a string constant for "Failed to obtain user group
+    info...". (Yongjun Zhang via atm)
+
+    HDFS-7209. Populate EDEK cache when creating encryption zone. (Yi Liu via wang)
+
+    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
     
     HDFS-7194. Fix findbugs "inefficient new String constructor" warning in
     DFSClient#PATH (yzhang via cmccabe)
+
+    HDFS-7198. Fix or suppress findbugs "unchecked conversion" warning in
+    DFSClient#getPathTraceScope (cmccabe)
+
+    HDFS-6657. Remove link to 'Legacy UI' in trunk's Namenode UI.
+    (Vinayakumar B via wheat)
+
+    HDFS-7201. Fix typos in hdfs-default.xml. (Dawson Choong via wheat9)
 
 Release 2.6.0 - UNRELEASED
 
@@ -657,6 +673,14 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7169. Add SE_BAD_FIELD to findbugsExcludeFile.xml.  (szetszwo)
 
+    HDFS-7217. Better batching of IBRs. (kihwal)
+
+    HDFS-7195. Update user doc of secure mode about Datanodes don't require root
+    or jsvc. (cnauroth)
+
+    HDFS-7228. Add an SSD policy into the default BlockStoragePolicySuite.
+    (jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -920,6 +944,14 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7203. Concurrent appending to the same file can cause data corruption
     (kihwal)
+
+    HDFS-7236. Fix TestOpenFilesWithSnapshot#testOpenFilesWithMultipleSnapshots.
+    (Yongjun Zhang via jing9)
+
+    HDFS-6544. Broken Link for GFS in package.html. (Suraj Nayak M via wheat9)
+
+    HDFS-7237. The command "hdfs namenode -rollingUpgrade" throws
+    ArrayIndexOutOfBoundsException.  (szetszwo)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   

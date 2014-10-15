@@ -132,6 +132,9 @@ Trunk (Unreleased)
     HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
     Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
 
+    HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
+    full. (Eric Hanson via cnauroth)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -584,6 +587,17 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11007. Reinstate building of ant tasks support. (jlowe via kihwal)
 
+    HADOOP-11178. Fix findbugs exclude file. (Arun Suresh via wang)
+
+    HADOOP-11174. Delegation token for KMS should only be got once if it
+    already exists. (Yi Liu via wang)
+
+    HADOOP-11184. Update Hadoop's lz4 to version r123. (cmccabe)
+
+    HADOOP-11181. Generalized o.a.h.s.t.d.DelegationTokenManager to handle all
+    sub-classes of AbstractDelegationTokenIdentifier. (zjshen)
+
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -811,6 +825,21 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10404. Some accesses to DomainSocketWatcher#closed are not protected
     by the lock (cmccabe)
 
+    HADOOP-11161. Expose close method in KeyProvider to give clients of
+    Provider implementations a hook to release resources. (Arun Suresh via atm)
+
+    HADOOP-11133. Should trim the content of keystore password file for JavaKeyStoreProvider
+    (Yi Liu via umamahesh)
+
+    HADOOP-11193. Fix uninitialized variables in NativeIO.c
+    (Xiaoyu Yao via wheat9)
+
+    HADOOP-11176. KMSClientProvider authentication fails when both currentUgi
+    and loginUgi are a proxied user. (Arun Suresh via atm)
+
+    HADOOP-11198. Fix typo in javadoc for FileSystem#listStatus().
+    (Li Lu via wheat9)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HADOOP-10734. Implement high-performance secure random number sources.
@@ -951,6 +980,12 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11163. MetricsSystemImpl may miss a registered source.
     (Chuan Liu via cnauroth)
+
+    HADOOP-11179. Java untar should handle the case that the file entry comes
+    without its parent directory entry. (Craig Welch via zjshen)
+
+    HADOOP-11175. Fix several issues of hadoop security configuration in user
+    doc. (Yi Liu via cnauroth)
 
 Release 2.5.1 - 2014-09-05
 

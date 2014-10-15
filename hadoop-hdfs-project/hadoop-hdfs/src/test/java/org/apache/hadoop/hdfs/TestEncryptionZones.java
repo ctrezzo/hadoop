@@ -117,10 +117,10 @@ public class TestEncryptionZones {
   private FileSystemTestHelper fsHelper;
 
   private MiniDFSCluster cluster;
-  private HdfsAdmin dfsAdmin;
-  private DistributedFileSystem fs;
+  protected HdfsAdmin dfsAdmin;
+  protected DistributedFileSystem fs;
   private File testRootDir;
-  private final String TEST_KEY = "testKey";
+  protected final String TEST_KEY = "testKey";
 
   protected FileSystemTestWrapper fsWrapper;
   protected FileContextTestWrapper fcWrapper;
@@ -149,12 +149,16 @@ public class TestEncryptionZones {
     fcWrapper = new FileContextTestWrapper(
         FileContext.getFileContext(cluster.getURI(), conf));
     dfsAdmin = new HdfsAdmin(cluster.getURI(), conf);
+    setProvider();
+    // Create a test key
+    DFSTestUtil.createKey(TEST_KEY, cluster, conf);
+  }
+  
+  protected void setProvider() {
     // Need to set the client's KeyProvider to the NN's for JKS,
     // else the updates do not get flushed properly
     fs.getClient().provider = cluster.getNameNode().getNamesystem()
         .getProvider();
-    // Create a test key
-    DFSTestUtil.createKey(TEST_KEY, cluster, conf);
   }
 
   @After

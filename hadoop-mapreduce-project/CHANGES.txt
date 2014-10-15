@@ -414,6 +414,21 @@ Release 2.6.0 - UNRELEASED
     MAPREDUCE-6029. TestCommitterEventHandler fails in trunk (Mit Desai via
     jlowe)
 
+    MAPREDUCE-6122. TestLineRecordReader may fail due to test data files checked
+    out of git with incorrect line endings. (cnauroth)
+
+    MAPREDUCE-6123. TestCombineFileInputFormat incorrectly starts 2
+    MiniDFSCluster instances. (cnauroth)
+
+    MAPREDUCE-5875. Make Counter limits consistent across JobClient, 
+    MRAppMaster, and YarnChild. (Gera Shegalov via kasha)
+
+    MAPREDUCE-6125. TestContainerLauncherImpl sometimes fails (Mit Desai via
+    jlowe)
+
+    MAPREDUCE-6115. TestPipeApplication#testSubmitter fails in trunk (Binglin
+    Chang via jlowe)
+
 Release 2.5.1 - 2014-09-05
 
   INCOMPATIBLE CHANGES

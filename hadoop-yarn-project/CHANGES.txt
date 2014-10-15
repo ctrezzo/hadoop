@@ -36,6 +36,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2179. [YARN-1492] Initial cache manager structure and context. 
     (Chris Trezzo via kasha) 
 
+    YARN-2180. [YARN-1492] In-memory backing store for cache manager. 
+    (Chris Trezzo via kasha)
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
@@ -43,6 +46,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2635. TestRM, TestRMRestart, TestClientToAMTokens should run 
     with both CS and FS. (Wei Yan and kasha via kasha)
+
+    YARN-2641. Decommission nodes on -refreshNodes instead of next 
+    NM-RM heartbeat. (Zhihai Xu via kasha)
 
   OPTIMIZATIONS
 
@@ -144,6 +150,17 @@ Release 2.6.0 - UNRELEASED
 
     YARN-913. Add a way to register long-lived services in a YARN cluster.
     (stevel)
+
+    YARN-2493. Added user-APIs for using node-labels. (Wangda Tan via vinodkv)
+
+    YARN-2544. Added admin-API objects for using node-labels. (Wangda Tan via
+    vinodkv)
+
+    YARN-2494. Added NodeLabels Manager internal API and implementation. (Wangda
+    Tan via vinodkv)
+
+    YARN-2501. Enhanced AMRMClient library to support requests against node
+    labels. (Wangda Tan via vinodkv)
 
   IMPROVEMENTS
 
@@ -321,6 +338,12 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2615. Changed ClientToAMTokenIdentifier/RM(Timeline)DelegationTokenIdentifier
     to use protobuf as payload. (Junping Du via jianhe)
+
+    YARN-2629. Made the distributed shell use the domain-based timeline ACLs.
+    (zjshen)
+
+    YARN-2583. Modified AggregatedLogDeletionService to be able to delete rolling
+    aggregated logs. (Xuan Gong via zjshen)
 
   OPTIMIZATIONS
 
@@ -593,9 +616,35 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2649. Fixed TestAMRMRPCNodeUpdates test failure. (Ming Ma via jianhe)
 
+    YARN-2662. TestCgroupsLCEResourcesHandler leaks file descriptors. (cnauroth)
+
   BREAKDOWN OF YARN-913 SUBTASKS AND RELATED JIRAS
 
     YARN-2652 Add hadoop-yarn-registry package under hadoop-yarn. (stevel)
+
+    YARN-2668 yarn-registry JAR won't link against ZK 3.4.5. (stevel)
+
+    YARN-2598 GHS should show N/A instead of null for the inaccessible information
+    (Zhijie Shen via mayank)
+
+    YARN-2671. Fixed ApplicationSubmissionContext to still set resource for
+    backward compatibility. (Wangda Tan via zjshen)
+
+    YARN-2667. Fix the release audit warning caused by hadoop-yarn-registry
+    (Yi Liu via jlowe)
+
+    YARN-2651. Spun off LogRollingInterval from LogAggregationContext. (Xuan Gong
+    via zjshen)
+
+    YARN-2377. Localization exception stack traces are not passed as
+    diagnostic info (Gera Shegalov via jlowe)
+
+    YARN-2308. Changed CapacityScheduler to explicitly throw exception if the
+    queue to which the apps were submitted is changed across RM restart.
+    (Craig Welch & Chang Li via jianhe)
+
+    YARN-2566. DefaultContainerExecutor should pick a working directory randomly. 
+    (Zhihai Xu via kasha)
 
 Release 2.5.1 - 2014-09-05
 

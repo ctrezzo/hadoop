@@ -64,7 +64,7 @@ class CleanerTask implements Runnable {
   /**
    * Creates a cleaner task based on the configuration. This is provided for
    * convenience.
-   * 
+   *
    * @param conf
    * @param appChecker
    * @param store
@@ -310,7 +310,7 @@ class CleanerTask implements Runnable {
    * Clean all resource references to a cache resource that contain application
    * ids pointing to finished applications. If the resource key does not exist,
    * do nothing.
-   * 
+   *
    * @param key a unique identifier for a resource
    * @throws YarnException
    */

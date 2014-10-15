@@ -277,7 +277,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   @VisibleForTesting
   KeyProvider provider;
   private final SpanReceiverHost spanReceiverHost;
-  private final Sampler traceSampler;
+  private final Sampler<?> traceSampler;
 
   /**
    * DFSClient configuration 
@@ -935,12 +935,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   @Override
   public synchronized void close() throws IOException {
-    if(clientRunning) {
-      closeAllFilesBeingWritten(false);
-      clientRunning = false;
-      getLeaseRenewer().closeClient(this);
-      // close connections to the namenode
-      closeConnectionToNamenode();
+    try {
+      if(clientRunning) {
+        closeAllFilesBeingWritten(false);
+        clientRunning = false;
+        getLeaseRenewer().closeClient(this);
+        // close connections to the namenode
+        closeConnectionToNamenode();
+      }
+    } finally {
+      if (provider != null) {
+        provider.close();
+      }
     }
   }
 

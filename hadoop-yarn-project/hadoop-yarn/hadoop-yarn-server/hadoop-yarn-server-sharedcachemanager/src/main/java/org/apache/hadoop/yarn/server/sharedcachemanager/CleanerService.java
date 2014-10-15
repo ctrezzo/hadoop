@@ -135,7 +135,7 @@ public class CleanerService extends CompositeService {
 
   /**
    * If no other cleaner task is running, execute an on-demand cleaner task.
-   * 
+   *
    * @return true if the cleaner task was started, false if there was already a
    *         cleaner task running.
    */
@@ -170,7 +170,7 @@ public class CleanerService extends CompositeService {
    * To ensure there are not multiple instances of the SCM running on a given
    * cluster, a global pid file is used. This file contains the hostname of the
    * machine that owns the pid file.
-   * 
+   *
    * @return true if the pid file was written, false otherwise
    * @throws IOException
    */
