@@ -31,6 +31,7 @@ import org.apache.hadoop.registry.client.impl.zk.ZookeeperConfigOptions;
 import org.apache.hadoop.registry.server.services.AddingCompositeService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperService;
 import org.apache.hadoop.registry.server.services.MicroZookeeperServiceKeys;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,6 +47,7 @@ import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.Principal;
 import java.util.HashSet;
@@ -60,6 +62,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
   public static final String REALM = "EXAMPLE.COM";
   public static final String ZOOKEEPER = "zookeeper";
   public static final String ZOOKEEPER_LOCALHOST = "zookeeper/localhost";
+  public static final String ZOOKEEPER_1270001 = "zookeeper/127.0.0.1";
   public static final String ZOOKEEPER_REALM = "zookeeper@" + REALM;
   public static final String ZOOKEEPER_CLIENT_CONTEXT = ZOOKEEPER;
   public static final String ZOOKEEPER_SERVER_CONTEXT = "ZOOKEEPER_SERVER";
@@ -117,6 +120,7 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
   protected MicroZookeeperService secureZK;
   protected static File jaasFile;
   private LoginContext zookeeperLogin;
+  private static String zkServerPrincipal;
 
   /**
    * All class initialization for this test class
@@ -202,12 +206,13 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
     keytab_zk = createKeytab(ZOOKEEPER, "zookeeper.keytab");
     keytab_alice = createKeytab(ALICE, "alice.keytab");
     keytab_bob = createKeytab(BOB, "bob.keytab");
+    zkServerPrincipal = Shell.WINDOWS ? ZOOKEEPER_1270001 : ZOOKEEPER_LOCALHOST;
 
     StringBuilder jaas = new StringBuilder(1024);
     jaas.append(registrySecurity.createJAASEntry(ZOOKEEPER_CLIENT_CONTEXT,
         ZOOKEEPER, keytab_zk));
     jaas.append(registrySecurity.createJAASEntry(ZOOKEEPER_SERVER_CONTEXT,
-        ZOOKEEPER_LOCALHOST, keytab_zk));
+        zkServerPrincipal, keytab_zk));
     jaas.append(registrySecurity.createJAASEntry(ALICE_CLIENT_CONTEXT,
         ALICE_LOCALHOST , keytab_alice));
     jaas.append(registrySecurity.createJAASEntry(BOB_CLIENT_CONTEXT,
@@ -299,7 +304,10 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
     assertNotEmpty("empty host", filename);
     assertNotNull("Null KDC", kdc);
     File keytab = new File(kdcWorkDir, filename);
-    kdc.createPrincipal(keytab, principal, principal +"/localhost");
+    kdc.createPrincipal(keytab,
+        principal,
+        principal + "/localhost",
+        principal + "/127.0.0.1");
     return keytab;
   }
 
@@ -319,11 +327,16 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
    * @param keytab keytab
    * @return the logged in context
    * @throws LoginException failure to log in
+   * @throws FileNotFoundException no keytab
    */
   protected LoginContext login(String principal,
-      String context, File keytab) throws LoginException {
+      String context, File keytab) throws LoginException,
+      FileNotFoundException {
     LOG.info("Logging in as {} in context {} with keytab {}",
         principal, context, keytab);
+    if (!keytab.exists()) {
+      throw new FileNotFoundException(keytab.getAbsolutePath());
+    }
     Set<Principal> principals = new HashSet<Principal>();
     principals.add(new KerberosPrincipal(principal));
     Subject subject = new Subject(false, principals, new HashSet<Object>(),
@@ -345,12 +358,11 @@ public class AbstractSecureRegistryTest extends RegistryTestHelper {
   protected synchronized void startSecureZK() throws Exception {
     assertNull("Zookeeper is already running", secureZK);
 
-    zookeeperLogin = login(ZOOKEEPER_LOCALHOST,
+    zookeeperLogin = login(zkServerPrincipal,
         ZOOKEEPER_SERVER_CONTEXT,
         keytab_zk);
     secureZK = createSecureZKInstance("test-" + methodName.getMethodName());
     secureZK.start();
   }
-
 
 }

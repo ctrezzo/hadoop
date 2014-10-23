@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NMToken;
@@ -254,13 +255,13 @@ public class ApplicationMasterService extends AbstractService implements
       if (hasApplicationMasterRegistered(applicationAttemptId)) {
         String message =
             "Application Master is already registered : "
-                + applicationAttemptId.getApplicationId();
+                + appID;
         LOG.warn(message);
         RMAuditLogger.logFailure(
           this.rmContext.getRMApps()
-            .get(applicationAttemptId.getApplicationId()).getUser(),
+            .get(appID).getUser(),
           AuditConstants.REGISTER_AM, "", "ApplicationMasterService", message,
-          applicationAttemptId.getApplicationId(), applicationAttemptId);
+          appID, applicationAttemptId);
         throw new InvalidApplicationMasterRequestException(message);
       }
       
@@ -340,6 +341,16 @@ public class ApplicationMasterService extends AbstractService implements
 
     ApplicationAttemptId applicationAttemptId =
         authorizeRequest().getApplicationAttemptId();
+    ApplicationId appId = applicationAttemptId.getApplicationId();
+
+    RMApp rmApp =
+        rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
+    // checking whether the app exits in RMStateStore at first not to throw
+    // ApplicationDoesNotExistInCacheException before and after
+    // RM work-preserving restart.
+    if (rmApp.isAppFinalStateStored()) {
+      return FinishApplicationMasterResponse.newInstance(true);
+    }
 
     AllocateResponseLock lock = responseMap.get(applicationAttemptId);
     if (lock == null) {
@@ -351,25 +362,18 @@ public class ApplicationMasterService extends AbstractService implements
       if (!hasApplicationMasterRegistered(applicationAttemptId)) {
         String message =
             "Application Master is trying to unregister before registering for: "
-                + applicationAttemptId.getApplicationId();
+                + appId;
         LOG.error(message);
         RMAuditLogger.logFailure(
             this.rmContext.getRMApps()
-                .get(applicationAttemptId.getApplicationId()).getUser(),
+                .get(appId).getUser(),
             AuditConstants.UNREGISTER_AM, "", "ApplicationMasterService",
-            message, applicationAttemptId.getApplicationId(),
+            message, appId,
             applicationAttemptId);
         throw new ApplicationMasterNotRegisteredException(message);
       }
 
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
-
-      RMApp rmApp =
-          rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
-
-      if (rmApp.isAppFinalStateStored()) {
-        return FinishApplicationMasterResponse.newInstance(true);
-      }
 
       rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
@@ -418,6 +422,7 @@ public class ApplicationMasterService extends AbstractService implements
 
     ApplicationAttemptId appAttemptId =
         amrmTokenIdentifier.getApplicationAttemptId();
+    ApplicationId applicationId = appAttemptId.getApplicationId();
 
     this.amLivelinessMonitor.receivedPing(appAttemptId);
 
@@ -432,14 +437,14 @@ public class ApplicationMasterService extends AbstractService implements
       if (!hasApplicationMasterRegistered(appAttemptId)) {
         String message =
             "Application Master is not registered for known application: "
-                + appAttemptId.getApplicationId()
+                + applicationId
                 + ". Let AM resync.";
         LOG.info(message);
         RMAuditLogger.logFailure(
-            this.rmContext.getRMApps().get(appAttemptId.getApplicationId())
+            this.rmContext.getRMApps().get(applicationId)
                 .getUser(), AuditConstants.REGISTER_AM, "",
             "ApplicationMasterService", message,
-            appAttemptId.getApplicationId(),
+            applicationId,
             appAttemptId);
         return resync;
       }
@@ -481,11 +486,22 @@ public class ApplicationMasterService extends AbstractService implements
       List<String> blacklistRemovals =
           (blacklistRequest != null) ?
               blacklistRequest.getBlacklistRemovals() : Collections.EMPTY_LIST;
-
+      RMApp app =
+          this.rmContext.getRMApps().get(applicationId);
+      
+      // set label expression for Resource Requests
+      ApplicationSubmissionContext asc = app.getApplicationSubmissionContext();
+      for (ResourceRequest req : ask) {
+        if (null == req.getNodeLabelExpression()) {
+          req.setNodeLabelExpression(asc.getNodeLabelExpression());
+        }
+      }
+              
       // sanity check
       try {
         RMServerUtils.validateResourceRequests(ask,
-            rScheduler.getMaximumResourceCapability());
+            rScheduler.getMaximumResourceCapability(), app.getQueue(),
+            rScheduler);
       } catch (InvalidResourceRequestException e) {
         LOG.warn("Invalid resource ask by application " + appAttemptId, e);
         throw e;
@@ -498,8 +514,6 @@ public class ApplicationMasterService extends AbstractService implements
         throw e;
       }
 
-      RMApp app =
-          this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
       // In the case of work-preserving AM restart, it's possible for the
       // AM to release containers from the earlier attempt.
       if (!app.getApplicationSubmissionContext()
@@ -582,7 +596,7 @@ public class ApplicationMasterService extends AbstractService implements
             .toString(), amrmToken.getPassword(), amrmToken.getService()
             .toString()));
         LOG.info("The AMRMToken has been rolled-over. Send new AMRMToken back"
-            + " to application: " + appAttemptId.getApplicationId());
+            + " to application: " + applicationId);
       }
 
       /*

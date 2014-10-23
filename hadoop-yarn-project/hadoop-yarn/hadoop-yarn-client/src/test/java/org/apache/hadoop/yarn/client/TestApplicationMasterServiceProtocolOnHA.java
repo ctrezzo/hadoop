@@ -23,32 +23,35 @@ import java.util.ArrayList;
 
 import org.junit.Assert;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 
-public class TestApplicationMasterServiceOnHA extends ProtocolHATestBase{
+public class TestApplicationMasterServiceProtocolOnHA
+    extends ProtocolHATestBase {
   private ApplicationMasterProtocol amClient;
   private ApplicationAttemptId attemptId ;
-  RMAppAttempt appAttempt;
 
   @Before
-  public void initiate() throws Exception {
+  public void initialize() throws Exception {
     startHACluster(0, false, false, true);
     attemptId = this.cluster.createFakeApplicationAttemptId();
     amClient = ClientRMProxy
@@ -70,6 +73,29 @@ public class TestApplicationMasterServiceOnHA extends ProtocolHATestBase{
     if(this.amClient != null) {
       RPC.stopProxy(this.amClient);
     }
+  }
+
+  @Test(timeout = 15000)
+  public void testRegisterApplicationMasterOnHA() throws YarnException,
+      IOException {
+    RegisterApplicationMasterRequest request =
+        RegisterApplicationMasterRequest.newInstance("localhost", 0, "");
+    RegisterApplicationMasterResponse response =
+        amClient.registerApplicationMaster(request);
+    Assert.assertEquals(response,
+        this.cluster.createFakeRegisterApplicationMasterResponse());
+  }
+
+  @Test(timeout = 15000)
+  public void testFinishApplicationMasterOnHA() throws YarnException,
+      IOException {
+    FinishApplicationMasterRequest request =
+        FinishApplicationMasterRequest.newInstance(
+            FinalApplicationStatus.SUCCEEDED, "", "");
+    FinishApplicationMasterResponse response =
+        amClient.finishApplicationMaster(request);
+    Assert.assertEquals(response,
+        this.cluster.createFakeFinishApplicationMasterResponse());
   }
 
   @Test(timeout = 15000)

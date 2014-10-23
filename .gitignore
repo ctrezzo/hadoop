@@ -3,6 +3,10 @@
 *.iws
 *.orig
 *.rej
+**/.keep
+*.sdf
+*.suo
+*.vcxproj.user
 .idea
 .svn
 .classpath

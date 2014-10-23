@@ -274,6 +274,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6072. Remove INSTALL document (Akira AJISAKA via aw)
 
+    MAPREDUCE-5970. Provide a boolean switch to enable MR-AM profiling (Gera
+    Shegalov via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -428,6 +431,15 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6115. TestPipeApplication#testSubmitter fails in trunk (Binglin
     Chang via jlowe)
+
+    MAPREDUCE-5873. Shuffle bandwidth computation includes time spent waiting
+    for maps (Siqi Li via jlowe)
+
+    MAPREDUCE-5542. Killing a job just as it finishes can generate an NPE in
+    client (Rohith via jlowe)
+
+    MAPREDUCE-6126. Fixed Rumen JobBuilder to ignore NormalizedResourceEvent.
+    (Junping Du via jianhe)
 
 Release 2.5.1 - 2014-09-05
 

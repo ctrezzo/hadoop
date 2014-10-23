@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
@@ -559,6 +560,11 @@ public class YarnConfiguration extends Configuration {
 
   public static final String DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION =
       "NONE";
+
+  /**
+   * RM proxy users' prefix
+   */
+  public static final String RM_PROXY_USER_PREFIX = RM_PREFIX + "proxyuser.";
 
   ////////////////////////////////
   // Node Manager Configs
@@ -1317,6 +1323,23 @@ public class YarnConfiguration extends Configuration {
   public static final boolean
       TIMELINE_SERVICE_HTTP_CROSS_ORIGIN_ENABLED_DEFAULT = false;
 
+  /** Timeline client settings */
+  public static final String TIMELINE_SERVICE_CLIENT_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "client.";
+
+  /** Timeline client call, max retries (-1 means no limit) */
+  public static final String TIMELINE_SERVICE_CLIENT_MAX_RETRIES =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "max-retries";
+
+  public static final int DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES = 30;
+
+  /** Timeline client call, retry interval */
+  public static final String TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS =
+      TIMELINE_SERVICE_CLIENT_PREFIX + "retry-interval-ms";
+
+  public static final long
+      DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS = 1000;
+
   // ///////////////////////////////
   // Shared Cache Configs
   // ///////////////////////////////
@@ -1486,10 +1509,16 @@ public class YarnConfiguration extends Configuration {
   
   public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
 
+  /**
+   * Class for RMNodeLabelsManager Please note this value should be consistent
+   * in client nodes and RM node(s)
+   */
+  public static final String RM_NODE_LABELS_MANAGER_CLASS = NODE_LABELS_PREFIX
+      + "manager-class";
+  
   /** URI for NodeLabelManager */
-  public static final String FS_NODE_LABELS_STORE_URI = NODE_LABELS_PREFIX
-      + "fs-store.uri";
-  public static final String DEFAULT_FS_NODE_LABELS_STORE_URI = "file:///tmp/";
+  public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
+      + "fs-store.root-dir";
   public static final String FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC =
       NODE_LABELS_PREFIX + "fs-store.retry-policy-spec";
   public static final String DEFAULT_FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC =

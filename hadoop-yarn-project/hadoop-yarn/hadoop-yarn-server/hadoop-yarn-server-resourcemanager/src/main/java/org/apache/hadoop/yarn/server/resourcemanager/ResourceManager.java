@@ -23,7 +23,9 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -67,6 +69,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMaste
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingMonitor;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.MemoryRMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -210,6 +214,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
         .refresh();
 
     // Do refreshSuperUserGroupsConfiguration with loaded core-site.xml
+    // Or use RM specific configurations to overwrite the common ones first
+    // if they exist
+    RMServerUtils.processRMProxyUsersConf(conf);
     ProxyUsers.refreshSuperUserGroupsConfiguration(this.conf);
 
     // load yarn-site.xml
@@ -320,6 +327,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return new AMLivelinessMonitor(this.rmDispatcher);
   }
   
+  protected RMNodeLabelsManager createNodeLabelManager()
+      throws InstantiationException, IllegalAccessException {
+    Class<? extends RMNodeLabelsManager> nlmCls =
+        conf.getClass(YarnConfiguration.RM_NODE_LABELS_MANAGER_CLASS,
+            MemoryRMNodeLabelsManager.class, RMNodeLabelsManager.class);
+    return nlmCls.newInstance();
+  }
+  
   protected DelegationTokenRenewer createDelegationTokenRenewer() {
     return new DelegationTokenRenewer();
   }
@@ -399,6 +414,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
       addService(amFinishingMonitor);
       rmContext.setAMFinishingMonitor(amFinishingMonitor);
+      
+      RMNodeLabelsManager nlm = createNodeLabelManager();
+      addService(nlm);
+      rmContext.setNodeLabelManager(nlm);
 
       boolean isRecoveryEnabled = conf.getBoolean(
           YarnConfiguration.RECOVERY_ENABLED,
@@ -901,6 +920,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
             + " for RM webapp authentication");
         RMAuthenticationHandler
           .setSecretManager(getClientRMService().rmDTSecretManager);
+        RMAuthenticationFilter
+          .setDelegationTokenSecretManager(getClientRMService().rmDTSecretManager);
         String yarnAuthKey =
             authPrefix + RMAuthenticationFilter.AUTH_HANDLER_PROPERTY;
         conf.setStrings(yarnAuthKey, RMAuthenticationHandler.class.getName());
@@ -960,7 +981,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * instance of {@link RMActiveServices} and initializes it.
    * @throws Exception
    */
-  void createAndInitActiveServices() throws Exception {
+  protected void createAndInitActiveServices() throws Exception {
     activeServices = new RMActiveServices();
     activeServices.init(conf);
   }
@@ -1012,8 +1033,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.rmLoginUGI.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        startActiveServices();
-        return null;
+        try {
+          startActiveServices();
+          return null;
+        } catch (Exception e) {
+          resetDispatcher();
+          createAndInitActiveServices();
+          throw e;
+        }
       }
     });
 

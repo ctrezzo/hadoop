@@ -129,6 +129,7 @@ public class CommonNodeLabelsManager extends AbstractService {
       if (labels != null) {
         c.labels =
             Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+        c.labels.addAll(labels);
       } else {
         c.labels = null;
       }
@@ -219,9 +220,11 @@ public class CommonNodeLabelsManager extends AbstractService {
     // service init, we don't want to trigger any event handling at that time.
     initDispatcher(getConfig());
 
-    dispatcher.register(NodeLabelsStoreEventType.class,
-        new ForwardingEventHandler());
-
+    if (null != dispatcher) {
+      dispatcher.register(NodeLabelsStoreEventType.class,
+          new ForwardingEventHandler());
+    }
+    
     startDispatcher();
   }
   
@@ -235,7 +238,11 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected void serviceStop() throws Exception {
     // finalize store
     stopDispatcher();
-    store.close();
+    
+    // only close store when we enabled store persistent
+    if (null != store) {
+      store.close();
+    }
   }
 
   /**
@@ -298,14 +305,14 @@ public class CommonNodeLabelsManager extends AbstractService {
     for (Entry<NodeId, Set<String>> entry : addedLabelsToNode.entrySet()) {
       NodeId nodeId = entry.getKey();
       Set<String> labels = entry.getValue();
-      
-      createNodeIfNonExisted(entry.getKey());
-      
+ 
+      createHostIfNonExisted(nodeId.getHost());
       if (nodeId.getPort() == WILDCARD_PORT) {
         Host host = nodeCollections.get(nodeId.getHost());
         host.labels.addAll(labels);
         newNMToLabels.put(nodeId, host.labels);
       } else {
+        createNodeIfNonExisted(nodeId);
         Node nm = getNMInNodeSet(nodeId);
         if (nm.labels == null) {
           nm.labels = new HashSet<String>();
@@ -533,21 +540,21 @@ public class CommonNodeLabelsManager extends AbstractService {
   
   @SuppressWarnings("unchecked")
   protected void internalReplaceLabelsOnNode(
-      Map<NodeId, Set<String>> replaceLabelsToNode) {
+      Map<NodeId, Set<String>> replaceLabelsToNode) throws IOException {
     // do replace labels to nodes
     Map<NodeId, Set<String>> newNMToLabels = new HashMap<NodeId, Set<String>>();
     for (Entry<NodeId, Set<String>> entry : replaceLabelsToNode.entrySet()) {
       NodeId nodeId = entry.getKey();
       Set<String> labels = entry.getValue();
 
-      // update nodeCollections
-      createNodeIfNonExisted(entry.getKey());
+      createHostIfNonExisted(nodeId.getHost());      
       if (nodeId.getPort() == WILDCARD_PORT) {
         Host host = nodeCollections.get(nodeId.getHost());
         host.labels.clear();
         host.labels.addAll(labels);
         newNMToLabels.put(nodeId, host.labels);
       } else {
+        createNodeIfNonExisted(nodeId);
         Node nm = getNMInNodeSet(nodeId);
         if (nm.labels == null) {
           nm.labels = new HashSet<String>();
@@ -671,10 +678,6 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   protected Node getNMInNodeSet(NodeId nodeId, Map<String, Host> map,
       boolean checkRunning) {
-    if (WILDCARD_PORT == nodeId.getPort()) {
-      return null;
-    }
-    
     Host host = map.get(nodeId.getHost());
     if (null == host) {
       return null;
@@ -706,17 +709,22 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
   }
   
-  protected void createNodeIfNonExisted(NodeId nodeId) {
+  protected void createNodeIfNonExisted(NodeId nodeId) throws IOException {
     Host host = nodeCollections.get(nodeId.getHost());
     if (null == host) {
-      host = new Host();
-      nodeCollections.put(nodeId.getHost(), host);
+      throw new IOException("Should create host before creating node.");
     }
-    if (nodeId.getPort() != WILDCARD_PORT) {
-      Node nm = host.nms.get(nodeId);
-      if (null == nm) {
-        host.nms.put(nodeId, new Node());
-      }
+    Node nm = host.nms.get(nodeId);
+    if (null == nm) {
+      host.nms.put(nodeId, new Node());
+    }
+  }
+  
+  protected void createHostIfNonExisted(String hostName) {
+    Host host = nodeCollections.get(hostName);
+    if (null == host) {
+      host = new Host();
+      nodeCollections.put(hostName, host);
     }
   }
 }

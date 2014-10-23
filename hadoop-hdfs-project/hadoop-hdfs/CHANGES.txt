@@ -18,9 +18,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-6581. Support writing to a single replica in RAM. (See breakdown of
-    tasks below for features and contributors).
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -37,9 +34,6 @@ Trunk (Unreleased)
 
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
     via jitendra)
-
-    HDFS-2486. Remove unnecessary priority level checks in
-    UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
 
     HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
     (todd)
@@ -256,107 +250,8 @@ Trunk (Unreleased)
 
     HDFS-6981. Fix DN upgrade with layout version change. (Arpit Agarwal)
 
-  BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
+    HDFS-7204. balancer doesn't run as a daemon (aw)
 
-    HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)
-
-    HDFS-6924. Add new RAM_DISK storage type. (Arpit Agarwal)
-
-    HDFS-6922. Add LazyPersist flag to INodeFile, save it in FsImage and
-    edit logs. (Arpit Agarwal)
-  
-    HDFS-6923. Propagate LazyPersist flag to DNs via DataTransferProtocol.
-    (Arpit Agarwal)
-
-    HDFS-6925. DataNode should attempt to place replicas on transient storage
-    first if lazyPersist flag is received. (Arpit Agarwal)
-
-    HDFS-6926. DN support for saving replicas to persistent storage and
-    evicting in-memory replicas. (Arpit Agarwal)
-
-    HDFS-6927. Initial unit tests for lazy persist files. (Arpit Agarwal)
-
-    HDFS-6929. NN periodically unlinks lazy persist files with missing
-    replicas from namespace. (Arpit Agarwal)
-
-    HDFS-6928. 'hdfs put' command should accept lazyPersist flag for testing.
-    (Arpit Agarwal)
-
-    HDFS-6960. Bugfix in LazyWriter, fix test case and some refactoring.
-    (Arpit Agarwal)
-
-    HDFS-6931. Move lazily persisted replicas to finalized directory on DN
-    startup. (Arpit Agarwal)
-
-    HDFS-6950. Add Additional unit tests for HDFS-6581. (Xiaoyu Yao via
-    Arpit Agarwal)
-
-    HDFS-6930. Improve replica eviction from RAM disk. (Arpit Agarwal)
-
-    HDFS-6977. Delete all copies when a block is deleted from the block space.
-    (Arpit Agarwal)
-
-    HDFS-6991. Notify NN of evicted block before deleting it from RAM disk.
-    (Arpit Agarwal)
-
-    HDFS-6978. Directory scanner should correctly reconcile blocks on RAM
-    disk. (Arpit Agarwal)
-
-    HDFS-7066. LazyWriter#evictBlocks misses a null check for replicaState.
-    (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7064. Fix unit test failures in HDFS-6581 branch. (Xiaoyu Yao via
-    Arpit Agarwal)
-
-    HDFS-6581. Few more unit test fixes for HDFS-6581. (Arpit Agarwal)
-
-    HDFS-7080. Fix finalize and upgrade unit test failures. (Arpit Agarwal)
-
-    HDFS-7084. FsDatasetImpl#copyBlockFiles debug log can be improved.
-    (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7091. Add forwarding constructor for INodeFile for existing callers.
-    (Arpit Agarwal)
-
-    HDFS-7100. Make eviction scheme pluggable. (Arpit Agarwal)
-
-    HDFS-7108. Fix unit test failures in SimulatedFsDataset. (Arpit Agarwal)
-
-    HDFS-7071. Updated editsStored and editsStored.xml to bump layout
-    version and add LazyPersist flag. (Xiaoyu Yao and Arpit Agarwal via
-    Arpit Agarwal)
-    
-    HDFS-6990. Add unit test for evict/delete RAM_DISK block with open
-    handle. (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7143. Fix findbugs warnings in HDFS-6581 branch. (szetszwo via
-    Arpit Agarwal)
-
-    HDFS-6932. Balancer and Mover tools should ignore replicas on RAM_DISK.
-    (Xiaoyu Yao via Arpit Agarwal)
-
-    HDFS-7144. Fix findbugs warnings in RamDiskReplicaTracker. (szetszwo via
-    Arpit Agarwal)
-
-    HDFS-7155. Bugfix in createLocatedFileStatus caused by bad merge.
-    (Arpit Agarwal)
-
-    HDFS-7153. Add storagePolicy to NN edit log during file creation.
-    (Arpit Agarwal)
-
-    HDFS-7159. Use block storage policy to set lazy persist preference.
-    (Arpit Agarwal)
-
-    HDFS-7129. Metrics to track usage of memory for writes. (Xiaoyu Yao
-    via Arpit Agarwal)
-
-    HDFS-7171. Fix Jenkins failures in HDFS-6581 branch. (Arpit Agarwal)
-
-    HDFS-7112. LazyWriter should use either async IO or one thread per physical
-    disk. (Xiaoyu Yao via cnauroth)
-
-    HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
-    (Xiaoyu Yao via cnauroth)
 
 Release 2.7.0 - UNRELEASED
 
@@ -381,6 +276,27 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
 
+    HDFS-7266. HDFS Peercache enabled check should not lock on object (awang
+    via cmccabe)
+
+    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
+
+    HDFS-7254. Add documentation for hot swaping DataNode drives (Lei Xu via
+    Colin P. McCabe)
+
+    HDFS-6877. Avoid calling checkDisk when an HDFS volume is removed during a
+    write. (Lei Xu via Colin P. McCabe)
+
+    HDFS-2486. Remove unnecessary priority level checks in
+    UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
+
+    HDFS-6824. Additional user documentation for HDFS encryption. (wang)
+
+    HDFS-7165. Separate block metrics for files with replication count 1.
+    (Zhe Zhang via wang)
+
+    HDFS-7222. Expose DataNode network errors as a metric. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -396,6 +312,22 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7201. Fix typos in hdfs-default.xml. (Dawson Choong via wheat9)
 
+    HDFS-7190. Bad use of Preconditions in startFileInternal().
+    (Dawson Choong via wheat9)
+
+    HDFS-7242. Code improvement for FSN#checkUnreadableBySuperuser.
+    (Yi Liu via vinayakumarb)
+
+    HDFS-7252. small refinement to the use of isInAnEZ in FSNamesystem.
+    (Yi Liu via vinayakumarb)
+
+    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
+
+    HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
+
+    HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic 
+    via aw)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -404,6 +336,9 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-6584. Support archival storage.  (See breakdown of tasks below for
     features and contributors)
+
+    HDFS-6581. Support writing to a single replica in RAM. (See breakdown of
+    tasks below for features and contributors).
 
   IMPROVEMENTS
 
@@ -953,6 +888,24 @@ Release 2.6.0 - UNRELEASED
     HDFS-7237. The command "hdfs namenode -rollingUpgrade" throws
     ArrayIndexOutOfBoundsException.  (szetszwo)
 
+    HDFS-7185. The active NameNode will not accept an fsimage sent from the
+    standby during rolling upgrade. (jing9)
+
+    HDFS-7208. NN doesn't schedule replication when a DN storage fails.
+    (Ming Ma via szetszwo)
+
+    HDFS-5089. When a LayoutVersion support SNAPSHOT, it must support
+    FSIMAGE_NAME_OPTIMIZATION.  (szetszwo)
+
+    HDFS-7260. Change DFSOutputStream.MAX_PACKETS to be configurable. (szetszwo)
+
+    HDFS-7259. Unresponseive NFS mount point due to deferred COMMIT response.
+    (brandonli)
+
+    HDFS-7215.Add JvmPauseMonitor to NFS gateway (brandonli)
+
+    HDFS-7180. NFSv3 gateway frequently gets stuck due to GC (brandonli)
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -1191,6 +1144,111 @@ Release 2.6.0 - UNRELEASED
     (jing9)
 
     HDFS-7167. NPE while running Mover if the given path is for a file. (jing9)
+
+    HDFS-7154. Fix returning value of starting reconfiguration task (Lei Xu via
+    Colin P. McCabe)
+
+  BREAKDOWN OF HDFS-6581 SUBTASKS AND RELATED JIRAS
+
+    HDFS-6921. Add LazyPersist flag to FileStatus. (Arpit Agarwal)
+
+    HDFS-6924. Add new RAM_DISK storage type. (Arpit Agarwal)
+
+    HDFS-6922. Add LazyPersist flag to INodeFile, save it in FsImage and
+    edit logs. (Arpit Agarwal)
+
+    HDFS-6923. Propagate LazyPersist flag to DNs via DataTransferProtocol.
+    (Arpit Agarwal)
+
+    HDFS-6925. DataNode should attempt to place replicas on transient storage
+    first if lazyPersist flag is received. (Arpit Agarwal)
+
+    HDFS-6926. DN support for saving replicas to persistent storage and
+    evicting in-memory replicas. (Arpit Agarwal)
+
+    HDFS-6927. Initial unit tests for lazy persist files. (Arpit Agarwal)
+
+    HDFS-6929. NN periodically unlinks lazy persist files with missing
+    replicas from namespace. (Arpit Agarwal)
+
+    HDFS-6928. 'hdfs put' command should accept lazyPersist flag for testing.
+    (Arpit Agarwal)
+
+    HDFS-6960. Bugfix in LazyWriter, fix test case and some refactoring.
+    (Arpit Agarwal)
+
+    HDFS-6931. Move lazily persisted replicas to finalized directory on DN
+    startup. (Arpit Agarwal)
+
+    HDFS-6950. Add Additional unit tests for HDFS-6581. (Xiaoyu Yao via
+    Arpit Agarwal)
+
+    HDFS-6930. Improve replica eviction from RAM disk. (Arpit Agarwal)
+
+    HDFS-6977. Delete all copies when a block is deleted from the block space.
+    (Arpit Agarwal)
+
+    HDFS-6991. Notify NN of evicted block before deleting it from RAM disk.
+    (Arpit Agarwal)
+
+    HDFS-6978. Directory scanner should correctly reconcile blocks on RAM
+    disk. (Arpit Agarwal)
+
+    HDFS-7066. LazyWriter#evictBlocks misses a null check for replicaState.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7064. Fix unit test failures in HDFS-6581 branch. (Xiaoyu Yao via
+    Arpit Agarwal)
+
+    HDFS-6581. Few more unit test fixes for HDFS-6581. (Arpit Agarwal)
+
+    HDFS-7080. Fix finalize and upgrade unit test failures. (Arpit Agarwal)
+
+    HDFS-7084. FsDatasetImpl#copyBlockFiles debug log can be improved.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7091. Add forwarding constructor for INodeFile for existing callers.
+    (Arpit Agarwal)
+
+    HDFS-7100. Make eviction scheme pluggable. (Arpit Agarwal)
+
+    HDFS-7108. Fix unit test failures in SimulatedFsDataset. (Arpit Agarwal)
+
+    HDFS-7071. Updated editsStored and editsStored.xml to bump layout
+    version and add LazyPersist flag. (Xiaoyu Yao and Arpit Agarwal via
+    Arpit Agarwal)
+
+    HDFS-6990. Add unit test for evict/delete RAM_DISK block with open
+    handle. (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7143. Fix findbugs warnings in HDFS-6581 branch. (szetszwo via
+    Arpit Agarwal)
+
+    HDFS-6932. Balancer and Mover tools should ignore replicas on RAM_DISK.
+    (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7144. Fix findbugs warnings in RamDiskReplicaTracker. (szetszwo via
+    Arpit Agarwal)
+
+    HDFS-7155. Bugfix in createLocatedFileStatus caused by bad merge.
+    (Arpit Agarwal)
+
+    HDFS-7153. Add storagePolicy to NN edit log during file creation.
+    (Arpit Agarwal)
+
+    HDFS-7159. Use block storage policy to set lazy persist preference.
+    (Arpit Agarwal)
+
+    HDFS-7129. Metrics to track usage of memory for writes. (Xiaoyu Yao
+    via Arpit Agarwal)
+
+    HDFS-7171. Fix Jenkins failures in HDFS-6581 branch. (Arpit Agarwal)
+
+    HDFS-7112. LazyWriter should use either async IO or one thread per physical
+    disk. (Xiaoyu Yao via cnauroth)
+
+    HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
+    (Xiaoyu Yao via cnauroth)
 
 Release 2.5.1 - 2014-09-05
 

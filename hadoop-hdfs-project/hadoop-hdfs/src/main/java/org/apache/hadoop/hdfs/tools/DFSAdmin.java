@@ -458,6 +458,8 @@ public class DFSAdmin extends FsShell {
                        dfs.getCorruptBlocksCount());
     System.out.println("Missing blocks: " + 
                        dfs.getMissingBlocksCount());
+    System.out.println("Missing blocks (with replication factor 1): " +
+                      dfs.getMissingReplOneBlocksCount());
 
     System.out.println();
 
@@ -1396,11 +1398,12 @@ public class DFSAdmin extends FsShell {
       ClientDatanodeProtocol dnProxy = getDataNodeProxy(address);
       dnProxy.startReconfiguration();
       System.out.println("Started reconfiguration task on DataNode " + address);
+      return 0;
     } else {
       System.err.println("Node type " + nodeType +
           " does not support reconfiguration.");
+      return 1;
     }
-    return -1;
   }
 
   int getReconfigurationStatus(String nodeType, String address,
@@ -1438,11 +1441,11 @@ public class DFSAdmin extends FsShell {
         }
       } catch (IOException e) {
         err.println("DataNode reloading configuration: " + e + ".");
-        return -1;
+        return 1;
       }
     } else {
       err.println("Node type " + nodeType + " does not support reconfiguration.");
-      return -1;
+      return 1;
     }
     return 0;
   }

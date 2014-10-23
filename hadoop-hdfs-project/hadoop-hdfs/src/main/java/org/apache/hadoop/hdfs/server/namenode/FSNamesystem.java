@@ -1021,7 +1021,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       MetaRecoveryContext recovery = startOpt.createRecoveryContext();
       final boolean staleImage
           = fsImage.recoverTransitionRead(startOpt, this, recovery);
-      if (RollingUpgradeStartupOption.ROLLBACK.matches(startOpt)) {
+      if (RollingUpgradeStartupOption.ROLLBACK.matches(startOpt) ||
+          RollingUpgradeStartupOption.DOWNGRADE.matches(startOpt)) {
         rollingUpgradeInfo = null;
       }
       final boolean needToSave = staleImage && !haEnabled && !isRollingUpgrade(); 
@@ -1031,6 +1032,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (needToSave) {
         fsImage.saveNamespace(this);
       } else {
+        updateStorageVersionForRollingUpgrade(fsImage.getLayoutVersion(),
+            startOpt);
         // No need to save, so mark the phase done.
         StartupProgress prog = NameNode.getStartupProgress();
         prog.beginPhase(Phase.SAVING_CHECKPOINT);
@@ -1050,6 +1053,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
     imageLoadComplete();
+  }
+
+  private void updateStorageVersionForRollingUpgrade(final long layoutVersion,
+      StartupOption startOpt) throws IOException {
+    boolean rollingStarted = RollingUpgradeStartupOption.STARTED
+        .matches(startOpt) && layoutVersion > HdfsConstants
+        .NAMENODE_LAYOUT_VERSION;
+    boolean rollingRollback = RollingUpgradeStartupOption.ROLLBACK
+        .matches(startOpt);
+    if (rollingRollback || rollingStarted) {
+      fsImage.updateStorageVersion();
+    }
   }
 
   private void startSecretManager() {
@@ -2577,11 +2592,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         src = resolvePath(src, pathComponents);
         INodesInPath iip = dir.getINodesInPath4Write(src);
         // Nothing to do if the path is not within an EZ
-        if (dir.isInAnEZ(iip)) {
-          EncryptionZone zone = dir.getEZForPath(iip);
+        final EncryptionZone zone = dir.getEZForPath(iip);
+        if (zone != null) {
           protocolVersion = chooseProtocolVersion(zone, supportedVersions);
           suite = zone.getSuite();
-          ezKeyName = dir.getKeyName(iip);
+          ezKeyName = zone.getKeyName();
 
           Preconditions.checkNotNull(protocolVersion);
           Preconditions.checkNotNull(suite);
@@ -2664,14 +2679,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     FileEncryptionInfo feInfo = null;
-    if (dir.isInAnEZ(iip)) {
+
+    final EncryptionZone zone = dir.getEZForPath(iip);
+    if (zone != null) {
       // The path is now within an EZ, but we're missing encryption parameters
       if (suite == null || edek == null) {
         throw new RetryStartFileException();
       }
       // Path is within an EZ and we have provided encryption parameters.
       // Make sure that the generated EDEK matches the settings of the EZ.
-      String ezKeyName = dir.getKeyName(iip);
+      final String ezKeyName = zone.getKeyName();
       if (!ezKeyName.equals(edek.getEncryptionKeyName())) {
         throw new RetryStartFileException();
       }
@@ -2679,7 +2696,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           edek.getEncryptedKeyVersion().getMaterial(),
           edek.getEncryptedKeyIv(),
           ezKeyName, edek.getEncryptionKeyVersionName());
-      Preconditions.checkNotNull(feInfo);
     }
 
     final INodeFile myFile = INodeFile.valueOf(inode, src, true);
@@ -5282,6 +5298,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // not locking
     return blockManager.getMissingBlocksCount();
   }
+
+  @Metric({"MissingReplOneBlocks", "Number of missing blocks " +
+      "with replication factor 1"})
+  public long getMissingReplOneBlocksCount() {
+    // not locking
+    return blockManager.getMissingReplOneBlocksCount();
+  }
   
   @Metric({"ExpiredHeartbeats", "Number of expired heartbeats"})
   public int getExpiredHeartbeats() {
@@ -5323,6 +5346,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     stats[ClientProtocol.GET_STATS_UNDER_REPLICATED_IDX] = getUnderReplicatedBlocks();
     stats[ClientProtocol.GET_STATS_CORRUPT_BLOCKS_IDX] = getCorruptReplicaBlocks();
     stats[ClientProtocol.GET_STATS_MISSING_BLOCKS_IDX] = getMissingBlocksCount();
+    stats[ClientProtocol.GET_STATS_MISSING_REPL_ONE_BLOCKS_IDX] =
+        getMissingReplOneBlocksCount();
     return stats;
   }
 
@@ -6398,10 +6423,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void checkUnreadableBySuperuser(FSPermissionChecker pc,
       INode inode, int snapshotId)
       throws IOException {
-    for (XAttr xattr : dir.getXAttrs(inode, snapshotId)) {
-      if (XAttrHelper.getPrefixName(xattr).
-          equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
-        if (pc.isSuperUser()) {
+    if (pc.isSuperUser()) {
+      for (XAttr xattr : dir.getXAttrs(inode, snapshotId)) {
+        if (XAttrHelper.getPrefixName(xattr).
+            equals(SECURITY_XATTR_UNREADABLE_BY_SUPERUSER)) {
           throw new AccessControlException("Access is denied for " +
               pc.getUser() + " since the superuser is not allowed to " +
               "perform this operation.");
@@ -7589,6 +7614,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return getMissingBlocksCount();
   }
   
+  @Override // NameNodeMXBean
+  public long getNumberOfMissingBlocksWithReplicationFactorOne() {
+    return getMissingReplOneBlocksCount();
+  }
+
   @Override // NameNodeMXBean
   public int getThreads() {
     return ManagementFactory.getThreadMXBean().getThreadCount();

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +26,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.nodelabels.NodeLabelTestBase;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
@@ -40,11 +42,11 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
   private final Resource SMALL_RESOURCE = Resource.newInstance(100, 0);
   private final Resource LARGE_NODE = Resource.newInstance(1000, 0);
   
-  DummyRMNodeLabelsManager mgr = null;
+  MemoryRMNodeLabelsManager mgr = null;
 
   @Before
   public void before() {
-    mgr = new DummyRMNodeLabelsManager();
+    mgr = new MemoryRMNodeLabelsManager();
     mgr.init(new Configuration());
     mgr.start();
   }
@@ -93,6 +95,14 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     mgr.removeFromClusterNodeLabels(ImmutableSet.of("p1"));
     Assert.assertEquals(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null),
         Resources.add(SMALL_RESOURCE, LARGE_NODE));
+  }
+  
+  @Test(timeout = 5000)
+  public void testActivateNodeManagerWithZeroPort() throws Exception {
+    // active two NM, one is zero port , another is non-zero port. no exception
+    // should be raised
+    mgr.activateNode(NodeId.newInstance("n1", 0), SMALL_RESOURCE);
+    mgr.activateNode(NodeId.newInstance("n1", 2), LARGE_NODE);
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -363,5 +373,32 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
         mgr.getQueueResource("Q4", q4Label, clusterResource));
     Assert.assertEquals(clusterResource,
         mgr.getQueueResource("Q5", q5Label, clusterResource));
+  }
+  
+  @Test(timeout=5000)
+  public void testGetLabelResourceWhenMultipleNMsExistingInSameHost() throws IOException {
+    // active two NM to n1, one large and one small
+    mgr.activateNode(NodeId.newInstance("n1", 1), SMALL_RESOURCE);
+    mgr.activateNode(NodeId.newInstance("n1", 2), SMALL_RESOURCE);
+    mgr.activateNode(NodeId.newInstance("n1", 3), SMALL_RESOURCE);
+    mgr.activateNode(NodeId.newInstance("n1", 4), SMALL_RESOURCE);
+    
+    // check resource of no label, it should be small * 4
+    Assert.assertEquals(
+        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null),
+        Resources.multiply(SMALL_RESOURCE, 4));
+    
+    // change two of these nodes to p1, check resource of no_label and P1
+    mgr.addToCluserNodeLabels(toSet("p1"));
+    mgr.addLabelsToNode(ImmutableMap.of(toNodeId("n1:1"), toSet("p1"),
+        toNodeId("n1:2"), toSet("p1")));
+    
+    // check resource
+    Assert.assertEquals(
+        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null),
+        Resources.multiply(SMALL_RESOURCE, 2));    
+    Assert.assertEquals(
+            mgr.getResourceByLabel("p1", null),
+            Resources.multiply(SMALL_RESOURCE, 2));
   }
 }

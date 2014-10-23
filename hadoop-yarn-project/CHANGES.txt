@@ -50,6 +50,10 @@ Release 2.7.0 - UNRELEASED
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
 
+    YARN-2682. Updated WindowsSecureContainerExecutor to not use
+    DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
+    instead. (Zhihai Xu via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -161,6 +165,21 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2501. Enhanced AMRMClient library to support requests against node
     labels. (Wangda Tan via vinodkv)
+
+    YARN-2656. Made RM web services authentication filter support proxy user.
+    (Varun Vasudev and Zhijie Shen via zjshen)
+
+    YARN-2496. Enhanced Capacity Scheduler to have basic support for allocating
+    resources based on node-labels. (Wangda Tan via vinodkv)
+
+    YARN-2500. Enhaced ResourceManager to support schedulers allocating resources
+    based on node-labels. (Wangda Tan via vinodkv)
+
+    YARN-2504. Enhanced RM Admin CLI to support management of node-labels.
+    (Wangda Tan via vinodkv)
+
+    YARN-2198. Remove the need to run NodeManager as privileged account for
+    Windows Secure Container Executor. (Remus Rusanu via jianhe)
 
   IMPROVEMENTS
 
@@ -344,6 +363,30 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2583. Modified AggregatedLogDeletionService to be able to delete rolling
     aggregated logs. (Xuan Gong via zjshen)
+
+    YARN-2312. Deprecated old ContainerId#getId API and updated MapReduce to
+    use ContainerId#getContainerId instead. (Tsuyoshi OZAWA via jianhe)
+
+    YARN-2621. Simplify the output when the user doesn't have the access for
+    getDomain(s). (Zhijie Shen via jianhe)
+
+    YARN-1879. Marked Idempotent/AtMostOnce annotations to ApplicationMasterProtocol
+    for RM fail over. (Tsuyoshi OZAWA via jianhe)
+
+    YARN-2676. Enhanced Timeline auth-filter to support proxy users. (Zhijie Shen
+    via vinodkv)
+
+    YARN-2673. Made timeline client put APIs retry if ConnectException happens.
+    (Li Lu via zjshen)
+
+    YARN-2582. Fixed Log CLI and Web UI for showing aggregated logs of LRS. (Xuan
+    Gong via zjshen)
+
+    YARN-90. NodeManager should identify failed disks becoming good again
+    (Varun Vasudev via jlowe)
+
+    YARN-2709. Made timeline client getDelegationToken API retry if ConnectException
+    happens. (Li Lu via zjshen)
 
   OPTIMIZATIONS
 
@@ -571,6 +614,20 @@ Release 2.6.0 - UNRELEASED
     YARN-2628. Capacity scheduler with DominantResourceCalculator carries out
     reservation even though slots are free. (Varun Vasudev via jianhe)
 
+    YARN-2685. Fixed a bug in CommonNodeLabelsManager that caused wrong resource
+    tracking per label when a host runs multiple node-managers. (Wangda Tan via
+    vinodkv)
+
+    YARN-2699. Fixed a bug in CommonNodeLabelsManager that caused tests to fail
+    when using ephemeral ports on NodeIDs. (Wangda Tan via vinodkv)
+
+    YARN-2705. Fixed bugs in ResourceManager node-label manager that were causing
+    test-failures: added a dummy in-memory labels-manager. (Wangda Tan via
+    vinodkv)
+
+    YARN-2715. Fixed ResourceManager to respect common configurations for proxy
+    users/groups beyond just the YARN level config. (Zhijie Shen via vinodkv)
+
   BREAKDOWN OF YARN-1051 SUBTASKS AND RELATED JIRAS
 
     YARN-1707. Introduce APIs to add/remove/resize queues in the
@@ -623,6 +680,16 @@ Release 2.6.0 - UNRELEASED
     YARN-2652 Add hadoop-yarn-registry package under hadoop-yarn. (stevel)
 
     YARN-2668 yarn-registry JAR won't link against ZK 3.4.5. (stevel)
+    
+    YARN-2689 TestSecureRMRegistryOperations failing on windows:
+    secure ZK won't start (stevel)
+
+    YARN-2692 ktutil test hanging on some machines/ktutil versions (stevel)
+
+    YARN-2700 TestSecureRMRegistryOperations failing on windows: auth problems
+    (stevel)
+
+    ---
 
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
     (Zhijie Shen via mayank)
@@ -645,6 +712,23 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2566. DefaultContainerExecutor should pick a working directory randomly. 
     (Zhihai Xu via kasha)
+
+    YARN-2588. Standby RM fails to transitionToActive if previous
+    transitionToActive failed with ZK exception. (Rohith Sharmaks via jianhe)
+
+    YARN-2701. Potential race condition in startLocalizer when using
+    LinuxContainerExecutor. (Xuan Gong via jianhe)
+
+    YARN-2717. Avoided duplicate logging when container logs are not found. (Xuan
+    Gong via zjshen)
+
+    YARN-2720. Windows: Wildcard classpath variables not expanded against
+    resources contained in archives. (Craig Welch via cnauroth)
+
+    YARN-2721. Suppress NodeExist exception thrown by ZKRMStateStore when it
+    retries creating znode. (Jian He via zjshen)
+
+    YARN-2732. Fixed syntax error in SecureContainer.apt.vm. (Jian He via zjshen)
 
 Release 2.5.1 - 2014-09-05
 

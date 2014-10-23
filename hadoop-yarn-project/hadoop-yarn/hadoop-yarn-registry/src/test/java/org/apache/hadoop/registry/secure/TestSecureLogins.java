@@ -57,19 +57,6 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
       LoggerFactory.getLogger(TestSecureLogins.class);
 
   @Test
-  public void testZKinKeytab() throws Throwable {
-    Assume.assumeTrue(!Shell.WINDOWS);
-    try {
-      String listing = ktList(keytab_zk);
-      assertTrue("no " + ZOOKEEPER_LOCALHOST + " in " + listing,
-          listing.contains(ZOOKEEPER_LOCALHOST));
-    } catch (IOException e) {
-      LOG.debug(KTUTIL + " failure: {}", e, e);
-      Assume.assumeTrue("Failed to run "+ KTUTIL+": " + e, false );
-    }
-  }
-
-  @Test
   public void testHasRealm() throws Throwable {
     assertNotNull(getRealm());
     LOG.info("ZK principal = {}", getPrincipalAndRealm(ZOOKEEPER_LOCALHOST));
@@ -99,12 +86,25 @@ public class TestSecureLogins extends AbstractSecureRegistryTest {
                                 ALICE_CLIENT_CONTEXT,
                                 keytab_alice);
 
-    logLoginDetails(ALICE_LOCALHOST, client);
-    String confFilename = System.getProperty(Environment.JAAS_CONF_KEY);
-    assertNotNull("Unset: "+ Environment.JAAS_CONF_KEY, confFilename);
-    String config = FileUtils.readFileToString(new File(confFilename));
-    LOG.info("{}=\n{}", confFilename, config);
-    RegistrySecurity.setZKSaslClientProperties(ALICE, ALICE_CLIENT_CONTEXT);
+    try {
+      logLoginDetails(ALICE_LOCALHOST, client);
+      String confFilename = System.getProperty(Environment.JAAS_CONF_KEY);
+      assertNotNull("Unset: "+ Environment.JAAS_CONF_KEY, confFilename);
+      String config = FileUtils.readFileToString(new File(confFilename));
+      LOG.info("{}=\n{}", confFilename, config);
+      RegistrySecurity.setZKSaslClientProperties(ALICE, ALICE_CLIENT_CONTEXT);
+    } finally {
+      client.logout();
+    }
+  }
+
+  @Test
+  public void testZKServerContextLogin() throws Throwable {
+    LoginContext client = login(ZOOKEEPER_LOCALHOST,
+                                ZOOKEEPER_SERVER_CONTEXT,
+                                keytab_zk);
+    logLoginDetails(ZOOKEEPER_LOCALHOST, client);
+
     client.logout();
   }
 

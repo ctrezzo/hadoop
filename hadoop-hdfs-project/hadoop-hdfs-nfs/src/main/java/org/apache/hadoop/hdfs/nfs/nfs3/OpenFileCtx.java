@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.nfs.conf.NfsConfigKeys;
+import org.apache.hadoop.hdfs.nfs.conf.NfsConfiguration;
 import org.apache.hadoop.hdfs.nfs.nfs3.WriteCtx.DataState;
 import org.apache.hadoop.io.BytesWritable.Comparator;
 import org.apache.hadoop.io.IOUtils;
@@ -77,7 +78,26 @@ class OpenFileCtx {
     COMMIT_INACTIVE_CTX,
     COMMIT_INACTIVE_WITH_PENDING_WRITE,
     COMMIT_ERROR,
-    COMMIT_DO_SYNC;
+    COMMIT_DO_SYNC,
+    /**
+     * Deferred COMMIT response could fail file uploading. The following two
+     * status are introduced as a solution. 1. if client asks to commit
+     * non-sequential trunk of data, NFS gateway return success with the hope
+     * that client will send the prerequisite writes. 2. if client asks to
+     * commit a sequential trunk(means it can be flushed to HDFS), NFS gateway
+     * return a special error NFS3ERR_JUKEBOX indicating the client needs to
+     * retry. Meanwhile, NFS gateway keeps flush data to HDFS and do sync
+     * eventually.
+     * 
+     * The reason to let client wait is that, we want the client to wait for the
+     * last commit. Otherwise, client thinks file upload finished (e.g., cp
+     * command returns success) but NFS could be still flushing staged data to
+     * HDFS. However, we don't know which one is the last commit. We make the
+     * assumption that a commit after sequential writes may be the last.
+     * Referring HDFS-7259 for more details.
+     * */
+    COMMIT_SPECIAL_WAIT, // scoped pending writes is sequential
+    COMMIT_SPECIAL_SUCCESS;// scoped pending writes is not sequential 
   }
 
   private final DFSClient client;
@@ -155,10 +175,14 @@ class OpenFileCtx {
   
   private volatile boolean enabledDump;
   private FileOutputStream dumpOut;
+  
+  /** Tracks the data buffered in memory related to non sequential writes */
   private AtomicLong nonSequentialWriteInMemory;
+  
   private RandomAccessFile raf;
   private final String dumpFilePath;
   private Daemon dumpThread;
+  private final boolean uploadLargeFile;
   
   private void updateLastAccessTime() {
     lastAccessTime = Time.monotonicNow();
@@ -184,7 +208,7 @@ class OpenFileCtx {
     return (pendingWrites.size() != 0 || pendingCommits.size() != 0);
   }
   
-  // Increase or decrease the memory occupation of non-sequential writes
+  /** Increase or decrease the memory occupation of non-sequential writes */
   private long updateNonSequentialWriteInMemory(long count) {
     long newValue = nonSequentialWriteInMemory.addAndGet(count);
     if (LOG.isDebugEnabled()) {
@@ -193,19 +217,20 @@ class OpenFileCtx {
     }
 
     Preconditions.checkState(newValue >= 0,
-        "nonSequentialWriteInMemory is negative after update with count "
-            + count);
+        "nonSequentialWriteInMemory is negative " + newValue
+            + " after update with count " + count);
     return newValue;
   }
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
       String dumpFilePath, DFSClient client, IdUserGroup iug) {
-    this(fos, latestAttr, dumpFilePath, client, iug, false);
+    this(fos, latestAttr, dumpFilePath, client, iug, false,
+        new NfsConfiguration());
   }
   
   OpenFileCtx(HdfsDataOutputStream fos, Nfs3FileAttributes latestAttr,
       String dumpFilePath, DFSClient client, IdUserGroup iug,
-      boolean aixCompatMode) {
+      boolean aixCompatMode, NfsConfiguration config) {
     this.fos = fos;
     this.latestAttr = latestAttr;
     this.aixCompatMode = aixCompatMode;
@@ -226,13 +251,15 @@ class OpenFileCtx {
     nonSequentialWriteInMemory = new AtomicLong(0);
   
     this.dumpFilePath = dumpFilePath;  
-    enabledDump = dumpFilePath == null ? false: true;
+    enabledDump = dumpFilePath != null;
     nextOffset = new AtomicLong();
     nextOffset.set(latestAttr.getSize());
     assert(nextOffset.get() == this.fos.getPos());
     dumpThread = null;
     this.client = client;
     this.iug = iug;
+    this.uploadLargeFile = config.getBoolean(NfsConfigKeys.LARGE_FILE_UPLOAD,
+        NfsConfigKeys.LARGE_FILE_UPLOAD_DEFAULT);
   }
 
   public Nfs3FileAttributes getLatestAttr() {
@@ -245,7 +272,7 @@ class OpenFileCtx {
   }
   
   // Check if need to dump the new writes
-  private void checkDump() {
+  private void waitForDump() {
     if (!enabledDump) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Do nothing, dump is disabled.");
@@ -270,6 +297,14 @@ class OpenFileCtx {
           this.notifyAll();          
         }
       }
+      
+      while (nonSequentialWriteInMemory.get() >= DUMP_WRITE_WATER_MARK) {
+        try {
+          this.wait();
+        } catch (InterruptedException ignored) {
+        }
+      }
+
     }
   }
 
@@ -356,6 +391,7 @@ class OpenFileCtx {
           }
           synchronized (OpenFileCtx.this) {
             if (nonSequentialWriteInMemory.get() < DUMP_WRITE_WATER_MARK) {
+              OpenFileCtx.this.notifyAll();
               try {
                 OpenFileCtx.this.wait();
                 if (LOG.isDebugEnabled()) {
@@ -372,8 +408,13 @@ class OpenFileCtx {
                 + " enabledDump: " + enabledDump);
           }
         } catch (Throwable t) {
+          // unblock threads with new request
+          synchronized (OpenFileCtx.this) {
+            OpenFileCtx.this.notifyAll();
+          }
           LOG.info("Dumper get Throwable: " + t + ". dumpFilePath: "
               + OpenFileCtx.this.dumpFilePath, t);
+          activeState = false;
         }
       }
     }
@@ -537,10 +578,15 @@ class OpenFileCtx {
       // check if there is a WriteCtx with the same range in pendingWrites
       WriteCtx oldWriteCtx = checkRepeatedWriteRequest(request, channel, xid);
       if (oldWriteCtx == null) {
-        addWrite(writeCtx);
+        pendingWrites.put(new OffsetRange(offset, offset + count), writeCtx);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("New write buffered with xid " + xid + " nextOffset "
+              + cachedOffset + " req offset=" + offset + " mapsize="
+              + pendingWrites.size());
+        }
       } else {
-        LOG.warn("Got a repeated request, same range, with xid:"
-            + writeCtx.getXid());
+        LOG.warn("Got a repeated request, same range, with xid:" + xid
+            + " nextOffset " + +cachedOffset + " req offset=" + offset);
       }
       return writeCtx;
     }
@@ -622,7 +668,7 @@ class OpenFileCtx {
       boolean startWriting = checkAndStartWrite(asyncDataService, writeCtx);
       if (!startWriting) {
         // offset > nextOffset. check if we need to dump data
-        checkDump();
+        waitForDump();
         
         // In test, noticed some Linux client sends a batch (e.g., 1MB)
         // of reordered writes and won't send more writes until it gets
@@ -657,7 +703,7 @@ class OpenFileCtx {
   private WRITE3Response processPerfectOverWrite(DFSClient dfsClient,
       long offset, int count, WriteStableHow stableHow, byte[] data,
       String path, WccData wccData, IdUserGroup iug) {
-    WRITE3Response response = null;
+    WRITE3Response response;
 
     // Read the content back
     byte[] readbuffer = new byte[count];
@@ -781,12 +827,43 @@ class OpenFileCtx {
         return COMMIT_STATUS.COMMIT_INACTIVE_WITH_PENDING_WRITE;
       }
     }
-
+    if (pendingWrites.isEmpty()) {
+      // Note that, there is no guarantee data is synced. Caller should still
+      // do a sync here though the output stream might be closed.
+      return COMMIT_STATUS.COMMIT_FINISHED;
+    }
+    
     long flushed = getFlushedOffset();
     if (LOG.isDebugEnabled()) {
       LOG.debug("getFlushedOffset=" + flushed + " commitOffset=" + commitOffset);
     }
 
+    // Handle large file upload
+    if (uploadLargeFile && !aixCompatMode) {
+      long co = (commitOffset > 0) ? commitOffset : pendingWrites.firstEntry()
+          .getKey().getMax() - 1;
+
+      if (co <= flushed) {
+        return COMMIT_STATUS.COMMIT_DO_SYNC;
+      } else if (co < nextOffset.get()) {
+        if (!fromRead) {
+          // let client retry the same request, add pending commit to sync later
+          CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
+              preOpAttr);
+          pendingCommits.put(commitOffset, commitCtx);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("return COMMIT_SPECIAL_WAIT");
+        }
+        return COMMIT_STATUS.COMMIT_SPECIAL_WAIT;
+      } else {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("return COMMIT_SPECIAL_SUCCESS");
+        }
+        return COMMIT_STATUS.COMMIT_SPECIAL_SUCCESS;
+      }
+    }
+    
     if (commitOffset > 0) {
       if (aixCompatMode) {
         // The AIX NFS client misinterprets RFC-1813 and will always send 4096
@@ -817,27 +894,14 @@ class OpenFileCtx {
     Entry<OffsetRange, WriteCtx> key = pendingWrites.firstEntry();
 
     // Commit whole file, commitOffset == 0
-    if (pendingWrites.isEmpty()) {
-      // Note that, there is no guarantee data is synced. TODO: We could still
-      // do a sync here though the output stream might be closed.
-      return COMMIT_STATUS.COMMIT_FINISHED;
-    } else {
-      if (!fromRead) {
-        // Insert commit
-        long maxOffset = key.getKey().getMax() - 1;
-        Preconditions.checkState(maxOffset > 0);
-        CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
-        pendingCommits.put(maxOffset, commitCtx);
-      }
-      return COMMIT_STATUS.COMMIT_WAIT;
+    if (!fromRead) {
+      // Insert commit
+      long maxOffset = key.getKey().getMax() - 1;
+      Preconditions.checkState(maxOffset > 0);
+      CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
+      pendingCommits.put(maxOffset, commitCtx);
     }
-  }
-  
-  private void addWrite(WriteCtx writeCtx) {
-    long offset = writeCtx.getOffset();
-    int count = writeCtx.getCount();
-    // For the offset range (min, max), min is inclusive, and max is exclusive
-    pendingWrites.put(new OffsetRange(offset, offset + count), writeCtx);
+    return COMMIT_STATUS.COMMIT_WAIT;
   }
   
   /**
@@ -1132,7 +1196,7 @@ class OpenFileCtx {
       dumpThread.interrupt();
       try {
         dumpThread.join(3000);
-      } catch (InterruptedException e) {
+      } catch (InterruptedException ignored) {
       }
     }
     

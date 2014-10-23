@@ -1062,6 +1062,19 @@ public class BlockManager {
     }
   }
 
+  /** Remove the blocks associated to the given DatanodeStorageInfo. */
+  void removeBlocksAssociatedTo(final DatanodeStorageInfo storageInfo) {
+    assert namesystem.hasWriteLock();
+    final Iterator<? extends Block> it = storageInfo.getBlockIterator();
+    DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
+    while(it.hasNext()) {
+      Block block = it.next();
+      removeStoredBlock(block, node);
+      invalidateBlocks.remove(node, block);
+    }
+    namesystem.checkSafeMode();
+  }
+
   /**
    * Adds block to list of blocks which will be invalidated on specified
    * datanode and log the operation
@@ -3423,6 +3436,11 @@ public class BlockManager {
   public long getMissingBlocksCount() {
     // not locking
     return this.neededReplications.getCorruptBlockSize();
+  }
+
+  public long getMissingReplOneBlocksCount() {
+    // not locking
+    return this.neededReplications.getCorruptReplOneBlockSize();
   }
 
   public BlockInfo addBlockCollection(BlockInfo block, BlockCollection bc) {

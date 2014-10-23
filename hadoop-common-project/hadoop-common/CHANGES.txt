@@ -365,6 +365,9 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11166. Remove ulimit from test-patch.sh. (wang)
 
+    HDFS-7227. Fix findbugs warning about NP_DEREFERENCE_OF_READLINE_VALUE in
+    SpanReceiverHost (cmccabe)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -597,6 +600,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-11181. Generalized o.a.h.s.t.d.DelegationTokenManager to handle all
     sub-classes of AbstractDelegationTokenIdentifier. (zjshen)
 
+    HADOOP-11207. Enhanced common DelegationTokenAuthenticationHandler to support
+    proxy-users on Delegation-token management operations. (Zhijie Shen via
+    vinodkv)
 
   OPTIMIZATIONS
 
@@ -659,7 +665,11 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10681. Remove unnecessary synchronization from Snappy & Zlib
     codecs. (Gopal Vijayaraghavan via acmurthy)
 
+    HADOOP-11194. Ignore .keep files. (kasha)
+
   BUG FIXES
+
+    HADOOP-11182. GraphiteSink emits wrong timestamps (Sascha Coenen via raviprak)
 
     HADOOP-10781. Unportable getgrouplist() usage breaks FreeBSD (Dmitry
     Sivachenko via Colin Patrick McCabe)
@@ -986,6 +996,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11175. Fix several issues of hadoop security configuration in user
     doc. (Yi Liu via cnauroth)
+
+    HADOOP-11122. Fix findbugs in ZK DelegationTokenSecretManagers.
+    (Arun Suresh via kasha)
 
 Release 2.5.1 - 2014-09-05
 
