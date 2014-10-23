@@ -125,8 +125,8 @@ public class TestCleanerTask {
 
   private CleanerTask createSpiedTask(FileSystem fs, AppChecker appChecker,
       SCMStore store, CleanerMetrics metrics, AtomicBoolean isCleanerRunning) {
-    return spy(new CleanerTask(ROOT, SLEEP_TIME, NESTED_LEVEL, fs, appChecker,
-        store, metrics, isCleanerRunning, true));
+    return spy(new CleanerTask(ROOT, SLEEP_TIME, NESTED_LEVEL, fs, store,
+        metrics, isCleanerRunning, true));
   }
 
   @Test

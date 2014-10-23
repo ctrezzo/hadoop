@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcache.SharedCacheUtil;
 import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
-import org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -83,13 +82,12 @@ public class InMemorySCMStore extends SCMStore {
   private final Object initialAppsLock = new Object();
   private long startTime;
   private int stalenessMinutes;
-  private AppChecker appChecker;
   private ScheduledExecutorService scheduler;
   private int initialDelayMin;
   private int checkPeriodMin;
 
-  public InMemorySCMStore() {
-    super(InMemorySCMStore.class.getName());
+  public InMemorySCMStore(AppChecker appChecker) {
+    super(InMemorySCMStore.class.getName(), appChecker);
   }
 
   private String intern(String key) {
@@ -107,9 +105,6 @@ public class InMemorySCMStore extends SCMStore {
     this.initialDelayMin = getInitialDelay(conf);
     this.checkPeriodMin = getCheckPeriod(conf);
     this.stalenessMinutes = getStalenessPeriod(conf);
-
-    appChecker = createAppCheckerService(conf);
-    addService(appChecker);
 
     bootstrap(conf);
 
@@ -155,11 +150,6 @@ public class InMemorySCMStore extends SCMStore {
     LOG.info("The background thread stopped.");
 
     super.serviceStop();
-  }
-
-  @VisibleForTesting
-  AppChecker createAppCheckerService(Configuration conf) {
-    return SharedCacheManager.createAppCheckerService(conf);
   }
 
   private void bootstrap(Configuration conf) throws IOException {
@@ -352,6 +342,17 @@ public class InMemorySCMStore extends SCMStore {
           resource.updateAccessTime();
         }
       }
+    }
+  }
+
+  /**
+   * Provides atomicity for the method.
+   */
+  @Override
+  public void cleanResourceReferences(String key) throws YarnException {
+    String interned = intern(key);
+    synchronized (interned) {
+      super.cleanResourceReferences(key);
     }
   }
 

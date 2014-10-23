@@ -19,9 +19,6 @@
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -37,7 +34,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcache.SharedCacheUtil;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
-import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourceReference;
 
 /**
  * The task that runs and cleans up the shared cache area for stale entries and
@@ -55,7 +51,6 @@ class CleanerTask implements Runnable {
   private final int nestedLevel;
   private final Path root;
   private final FileSystem fs;
-  private final AppChecker appChecker;
   private final SCMStore store;
   private final CleanerMetrics metrics;
   private final AtomicBoolean cleanerTaskIsRunning;
@@ -66,7 +61,6 @@ class CleanerTask implements Runnable {
    * convenience.
    *
    * @param conf
-   * @param appChecker
    * @param store
    * @param metrics
    * @param cleanerTaskRunning true if there is another cleaner task currently
@@ -74,8 +68,8 @@ class CleanerTask implements Runnable {
    * @param isScheduledTask true if the task is a scheduled task
    * @return an instance of a CleanerTask
    */
-  public static CleanerTask create(Configuration conf, AppChecker appChecker,
-      SCMStore store, CleanerMetrics metrics, AtomicBoolean cleanerTaskRunning,
+  public static CleanerTask create(Configuration conf, SCMStore store,
+      CleanerMetrics metrics, AtomicBoolean cleanerTaskRunning,
       boolean isScheduledTask) {
     try {
       // get the root directory for the shared cache
@@ -89,8 +83,8 @@ class CleanerTask implements Runnable {
       int nestedLevel = SharedCacheUtil.getCacheDepth(conf);
       FileSystem fs = FileSystem.get(conf);
 
-      return new CleanerTask(location, sleepTime, nestedLevel, fs, appChecker,
-          store, metrics, cleanerTaskRunning, isScheduledTask);
+      return new CleanerTask(location, sleepTime, nestedLevel, fs, store,
+          metrics, cleanerTaskRunning, isScheduledTask);
     } catch (IOException e) {
       LOG.error("Unable to obtain the filesystem for the cleaner service", e);
       throw new ExceptionInInitializerError(e);
@@ -102,7 +96,7 @@ class CleanerTask implements Runnable {
    * filesystem.
    */
   CleanerTask(String location, long sleepTime, int nestedLevel, FileSystem fs,
-      AppChecker appChecker, SCMStore store, CleanerMetrics metrics,
+      SCMStore store, CleanerMetrics metrics,
       AtomicBoolean cleanerTaskIsRunning, boolean isScheduledTask) {
     this.location = location;
     this.sleepTime = sleepTime;
@@ -110,7 +104,6 @@ class CleanerTask implements Runnable {
     this.root = new Path(location);
     this.fs = fs;
     this.store = store;
-    this.appChecker = appChecker;
     this.metrics = metrics;
     this.cleanerTaskIsRunning = cleanerTaskIsRunning;
     this.isScheduledTask = isScheduledTask;
@@ -136,7 +129,7 @@ class CleanerTask implements Runnable {
 
       // we're now ready to process the shared cache area
       process();
-    } catch (IOException e) {
+    } catch (Throwable e) {
       LOG.error("Unexpected exception while initializing the cleaner task. "
           + "This task will do nothing,", e);
     } finally {
@@ -230,7 +223,7 @@ class CleanerTask implements Runnable {
       String key = path.getName();
 
       try {
-        cleanResourceReferences(key);
+        store.cleanResourceReferences(key);
       } catch (YarnException e) {
         LOG.error("Exception thrown while removing dead appIds.", e);
       }
@@ -304,33 +297,6 @@ class CleanerTask implements Runnable {
           + renamedPath.toString() + ". We will leave it intact.");
     }
     return false;
-  }
-
-  /**
-   * Clean all resource references to a cache resource that contain application
-   * ids pointing to finished applications. If the resource key does not exist,
-   * do nothing.
-   *
-   * @param key a unique identifier for a resource
-   * @throws YarnException
-   */
-  private void cleanResourceReferences(String key) throws YarnException {
-    Collection<SharedCacheResourceReference> refs =
-        store.getResourceReferences(key);
-    if (!refs.isEmpty()) {
-      Set<SharedCacheResourceReference> refsToRemove =
-          new HashSet<SharedCacheResourceReference>();
-      for (SharedCacheResourceReference r : refs) {
-        if (!appChecker.isApplicationActive(r.getAppId())) {
-          // application in resource reference is dead, it is safe to remove the
-          // reference
-          refsToRemove.add(r);
-        }
-      }
-      if (refsToRemove.size() > 0) {
-        store.removeResourceReferences(key, refsToRemove, false);
-      }
-    }
   }
 
   /**

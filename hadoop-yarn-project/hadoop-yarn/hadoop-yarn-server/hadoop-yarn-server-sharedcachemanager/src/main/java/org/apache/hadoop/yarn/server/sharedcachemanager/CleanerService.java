@@ -99,8 +99,7 @@ public class CleanerService extends CompositeService {
     super.serviceStart();
 
     Runnable task =
-        CleanerTask.create(conf, appChecker, store, metrics,
-            cleanerTaskRunning, true);
+        CleanerTask.create(conf, store, metrics, cleanerTaskRunning, true);
     long periodInMinutes = getPeriod(conf);
     scheduledExecutor.scheduleAtFixedRate(task, getInitialDelay(conf),
         periodInMinutes, TimeUnit.MINUTES);
@@ -148,8 +147,7 @@ public class CleanerService extends CompositeService {
     }
 
     Runnable task =
-        CleanerTask.create(conf, appChecker, store, metrics,
-            cleanerTaskRunning, false);
+        CleanerTask.create(conf, store, metrics, cleanerTaskRunning, false);
     // this is a non-blocking call (it simply submits the task to the executor
     // queue and returns)
     this.scheduledExecutor.execute(task);
