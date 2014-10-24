@@ -24,7 +24,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,12 +65,12 @@ public class CleanerService extends CompositeService {
   private CleanerMetrics metrics;
   private ScheduledExecutorService scheduledExecutor;
   private final SCMStore store;
-  private final AtomicBoolean cleanerTaskRunning;
+  private final Lock cleanerTaskLock;
 
   public CleanerService(SCMStore store) {
     super("CleanerService");
     this.store = store;
-    this.cleanerTaskRunning = new AtomicBoolean(false);
+    this.cleanerTaskLock = new ReentrantLock();
   }
 
   @Override
@@ -79,10 +80,12 @@ public class CleanerService extends CompositeService {
     appChecker = createAppCheckerService(conf);
     addService(appChecker);
 
-    // create a single threaded scheduler service that services the cleaner task
+    // create scheduler executor service that services the cleaner tasks
+    // use 2 threads to accommodate the on-demand tasks and reduce the chance of
+    // back-to-back runs
     ThreadFactory tf =
         new ThreadFactoryBuilder().setNameFormat("Shared cache cleaner").build();
-    scheduledExecutor = Executors.newSingleThreadScheduledExecutor(tf);
+    scheduledExecutor = Executors.newScheduledThreadPool(2, tf);
     super.serviceInit(conf);
   }
 
@@ -99,7 +102,7 @@ public class CleanerService extends CompositeService {
     super.serviceStart();
 
     Runnable task =
-        CleanerTask.create(conf, store, metrics, cleanerTaskRunning, true);
+        CleanerTask.create(conf, store, metrics, cleanerTaskLock);
     long periodInMinutes = getPeriod(conf);
     scheduledExecutor.scheduleAtFixedRate(task, getInitialDelay(conf),
         periodInMinutes, TimeUnit.MINUTES);
@@ -133,35 +136,14 @@ public class CleanerService extends CompositeService {
   }
 
   /**
-   * If no other cleaner task is running, execute an on-demand cleaner task.
-   *
-   * @return true if the cleaner task was started, false if there was already a
-   *         cleaner task running.
+   * Execute an on-demand cleaner task.
    */
-  protected boolean runCleanerTask() {
-
-    if (!this.cleanerTaskRunning.compareAndSet(false, true)) {
-      LOG.warn("A cleaner task is already running. "
-          + "A new on-demand cleaner task will not be submitted.");
-      return false;
-    }
-
+  protected void runCleanerTask() {
     Runnable task =
-        CleanerTask.create(conf, store, metrics, cleanerTaskRunning, false);
+        CleanerTask.create(conf, store, metrics, cleanerTaskLock);
     // this is a non-blocking call (it simply submits the task to the executor
     // queue and returns)
     this.scheduledExecutor.execute(task);
-    /*
-     * We return true if the task is accepted for execution by the executor. Two
-     * notes: 1. There is a small race here between a scheduled task and an
-     * on-demand task. If the scheduled task happens to start after we check/set
-     * cleanerTaskRunning, but before we call execute, we will get two tasks
-     * that run back to back. Luckily, since we have already set
-     * cleanerTaskRunning, the scheduled task will do nothing and the on-demand
-     * task will clean. 2. We do not need to set the cleanerTaskRunning boolean
-     * back to false because this will be done in the task itself.
-     */
-    return true;
   }
 
   /**

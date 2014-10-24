@@ -19,7 +19,7 @@
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,8 +53,7 @@ class CleanerTask implements Runnable {
   private final FileSystem fs;
   private final SCMStore store;
   private final CleanerMetrics metrics;
-  private final AtomicBoolean cleanerTaskIsRunning;
-  private final boolean isScheduledTask;
+  private final Lock cleanerTaskLock;
 
   /**
    * Creates a cleaner task based on the configuration. This is provided for
@@ -63,14 +62,12 @@ class CleanerTask implements Runnable {
    * @param conf
    * @param store
    * @param metrics
-   * @param cleanerTaskRunning true if there is another cleaner task currently
-   *          running
-   * @param isScheduledTask true if the task is a scheduled task
+   * @param cleanerTaskLock lock that ensures a serial execution of cleaner
+   *                        task
    * @return an instance of a CleanerTask
    */
   public static CleanerTask create(Configuration conf, SCMStore store,
-      CleanerMetrics metrics, AtomicBoolean cleanerTaskRunning,
-      boolean isScheduledTask) {
+      CleanerMetrics metrics, Lock cleanerTaskLock) {
     try {
       // get the root directory for the shared cache
       String location =
@@ -84,7 +81,7 @@ class CleanerTask implements Runnable {
       FileSystem fs = FileSystem.get(conf);
 
       return new CleanerTask(location, sleepTime, nestedLevel, fs, store,
-          metrics, cleanerTaskRunning, isScheduledTask);
+          metrics, cleanerTaskLock);
     } catch (IOException e) {
       LOG.error("Unable to obtain the filesystem for the cleaner service", e);
       throw new ExceptionInInitializerError(e);
@@ -96,8 +93,7 @@ class CleanerTask implements Runnable {
    * filesystem.
    */
   CleanerTask(String location, long sleepTime, int nestedLevel, FileSystem fs,
-      SCMStore store, CleanerMetrics metrics,
-      AtomicBoolean cleanerTaskIsRunning, boolean isScheduledTask) {
+      SCMStore store, CleanerMetrics metrics, Lock cleanerTaskLock) {
     this.location = location;
     this.sleepTime = sleepTime;
     this.nestedLevel = nestedLevel;
@@ -105,15 +101,12 @@ class CleanerTask implements Runnable {
     this.fs = fs;
     this.store = store;
     this.metrics = metrics;
-    this.cleanerTaskIsRunning = cleanerTaskIsRunning;
-    this.isScheduledTask = isScheduledTask;
+    this.cleanerTaskLock = cleanerTaskLock;
   }
 
   @Override
   public void run() {
-    // check if it is a scheduled task
-    if (isScheduledTask
-        && !this.cleanerTaskIsRunning.compareAndSet(false, true)) {
+    if (!this.cleanerTaskLock.tryLock()) {
       // this is a scheduled task and there is already another task running
       LOG.warn("A cleaner task is already running. "
           + "This scheduled cleaner task will do nothing.");
@@ -135,7 +128,7 @@ class CleanerTask implements Runnable {
     } finally {
       // this is set to false regardless of if it is a scheduled or on-demand
       // task
-      this.cleanerTaskIsRunning.set(false);
+      this.cleanerTaskLock.unlock();
     }
   }
 
