@@ -50,16 +50,15 @@ Release 2.7.0 - UNRELEASED
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
 
-    YARN-2682. Updated WindowsSecureContainerExecutor to not use
-    DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
-    instead. (Zhihai Xu via jianhe)
-
   OPTIMIZATIONS
 
   BUG FIXES
 
     YARN-2254. TestRMWebServicesAppsModification should run against both 
     CS and FS. (Zhihai Xu via kasha)
+
+    YARN-2713. "RM Home" link in NM should point to one of the RMs in an 
+    HA setup. (kasha)
 
 Release 2.6.0 - UNRELEASED
 
@@ -387,6 +386,16 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2709. Made timeline client getDelegationToken API retry if ConnectException
     happens. (Li Lu via zjshen)
+
+    YARN-2682. Updated WindowsSecureContainerExecutor to not use
+    DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
+    instead. (Zhihai Xu via jianhe)
+
+    YARN-2209. Replaced AM resync/shutdown command with corresponding exceptions and
+    made related MR changes. (Jian He via zjshen)
+
+    YARN-2703. Added logUploadedTime into LogValue for better display. (Xuan Gong
+    via zjshen)
 
   OPTIMIZATIONS
 
@@ -729,6 +738,9 @@ Release 2.6.0 - UNRELEASED
     retries creating znode. (Jian He via zjshen)
 
     YARN-2732. Fixed syntax error in SecureContainer.apt.vm. (Jian He via zjshen)
+
+    YARN-2724. Skipped uploading a local log file to HDFS if exception is raised
+    when opening it. (Xuan Gong via zjshen)
 
 Release 2.5.1 - 2014-09-05
 

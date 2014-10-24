@@ -297,6 +297,15 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7222. Expose DataNode network errors as a metric. (Charles Lamb via wang)
 
+    HDFS-7257. Add the time of last HA state transition to NN's /jmx page.
+    (Charles Lamb via wheat9)
+
+    HDFS-7223. Tracing span description of IPC client is too long (iwasakims
+    via cmccabe)
+
+    HDFS-7283. Bump DataNode OOM log from WARN to ERROR.
+    (Stephen Chu via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -327,6 +336,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic 
     via aw)
+
+    HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
+    level instead of INFO level. (Xiaoyu Yao via wheat9)
 
 Release 2.6.0 - UNRELEASED
 
@@ -615,6 +627,12 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7228. Add an SSD policy into the default BlockStoragePolicySuite.
     (jing9)
+
+    HDFS-6904. YARN unable to renew delegation token fetched via webhdfs 
+    due to incorrect service port. (jitendra)
+
+    HDFS-6988. Improve HDFS-6581 eviction configuration (Xiaoyu Yao via Colin
+    P. McCabe)
 
   OPTIMIZATIONS
 
@@ -905,6 +923,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7215.Add JvmPauseMonitor to NFS gateway (brandonli)
 
     HDFS-7180. NFSv3 gateway frequently gets stuck due to GC (brandonli)
+
+    HDFS-7243. HDFS concat operation should not be allowed in Encryption Zone.
+    (clamb via yliu)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
