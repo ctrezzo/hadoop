@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 
@@ -1433,6 +1432,21 @@ public class YarnConfiguration extends Configuration {
   public static final String SCM_CLEANER_RESOURCE_SLEEP_MS =
       SCM_CLEANER_PREFIX + "resource-sleep-ms";
   public static final long DEFAULT_SCM_CLEANER_RESOURCE_SLEEP_MS = 0L;
+
+  /** The address of the node manager interface in the SCM. */
+  public static final String NM_SCM_ADDRESS = SHARED_CACHE_PREFIX
+      + "nodemanager.address";
+  public static final int DEFAULT_NM_SCM_PORT = 8046;
+  public static final String DEFAULT_NM_SCM_ADDRESS = "0.0.0.0:"
+      + DEFAULT_NM_SCM_PORT;
+
+  /**
+   * The number of SCM threads used to handle notify requests from the node
+   * manager.
+   */
+  public static final String SCM_NM_THREAD_COUNT = SHARED_CACHE_PREFIX
+      + "nodemanager.thread-count";
+  public static final int DEFAULT_SCM_NM_THREAD_COUNT = 50;
 
   ////////////////////////////////
   // Other Configs
