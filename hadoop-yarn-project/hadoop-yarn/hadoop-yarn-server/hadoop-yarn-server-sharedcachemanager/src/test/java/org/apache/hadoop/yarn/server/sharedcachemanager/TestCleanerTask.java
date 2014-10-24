@@ -27,7 +27,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,7 +55,7 @@ public class TestCleanerTask {
     SCMStore store = mock(SCMStore.class);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new AtomicBoolean());
+        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
     // the shared cache root does not exist
     when(fs.exists(task.getRootPath())).thenReturn(false);
 
@@ -72,7 +73,7 @@ public class TestCleanerTask {
     SCMStore store = mock(SCMStore.class);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new AtomicBoolean());
+        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
 
     // mock a resource that is not evictable
     when(store.isResourceEvictable(isA(String.class), isA(FileStatus.class)))
@@ -100,7 +101,7 @@ public class TestCleanerTask {
     SCMStore store = mock(SCMStore.class);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new AtomicBoolean());
+        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
 
     // mock an evictable resource
     when(store.isResourceEvictable(isA(String.class), isA(FileStatus.class)))
@@ -124,9 +125,9 @@ public class TestCleanerTask {
   }
 
   private CleanerTask createSpiedTask(FileSystem fs, AppChecker appChecker,
-      SCMStore store, CleanerMetrics metrics, AtomicBoolean isCleanerRunning) {
+      SCMStore store, CleanerMetrics metrics, Lock isCleanerRunning) {
     return spy(new CleanerTask(ROOT, SLEEP_TIME, NESTED_LEVEL, fs, store,
-        metrics, isCleanerRunning, true));
+        metrics, isCleanerRunning));
   }
 
   @Test
@@ -145,7 +146,7 @@ public class TestCleanerTask {
     when(store.removeResource(isA(String.class))).thenReturn(false);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new AtomicBoolean());
+        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
 
     // process the resource
     task.processSingleResource(resource);
