@@ -39,6 +39,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2180. [YARN-1492] In-memory backing store for cache manager. 
     (Chris Trezzo via kasha)
 
+    YARN-2183. [YARN-1492] Cleaner service for cache manager.
+    (Chris Trezzo and Sangjin Lee via kasha)
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
@@ -741,6 +744,17 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2724. Skipped uploading a local log file to HDFS if exception is raised
     when opening it. (Xuan Gong via zjshen)
+
+    YARN-1915. Fixed a race condition that client could use the ClientToAMToken
+    to contact with AM before AM actually receives the ClientToAMTokenMasterKey.
+    (Jason Lowe via jianhe)
+
+    YARN-2314. Disable ContainerManagementProtocolProxy cache by default to
+    prevent creating thousands of threads in a large cluster. (Jason Lowe via
+    jianhe)
+
+    YARN-2723. Fix rmadmin -replaceLabelsOnNode does not correctly parse port.
+    (Naganarasimha G R via xgong)
 
 Release 2.5.1 - 2014-09-05
 
