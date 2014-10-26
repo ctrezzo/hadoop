@@ -50,12 +50,11 @@ public class TestCleanerTask {
   @Test
   public void testNonExistentRoot() throws Exception {
     FileSystem fs = mock(FileSystem.class);
-    AppChecker appChecker = mock(AppChecker.class);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
+        createSpiedTask(fs, store, metrics, new ReentrantLock());
     // the shared cache root does not exist
     when(fs.exists(task.getRootPath())).thenReturn(false);
 
@@ -68,12 +67,11 @@ public class TestCleanerTask {
   @Test
   public void testProcessFreshResource() throws Exception {
     FileSystem fs = mock(FileSystem.class);
-    AppChecker appChecker = mock(AppChecker.class);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
+        createSpiedTask(fs, store, metrics, new ReentrantLock());
 
     // mock a resource that is not evictable
     when(store.isResourceEvictable(isA(String.class), isA(FileStatus.class)))
@@ -94,14 +92,11 @@ public class TestCleanerTask {
   @Test
   public void testProcessEvictableResource() throws Exception {
     FileSystem fs = mock(FileSystem.class);
-    AppChecker appChecker = mock(AppChecker.class);
-    when(appChecker.isApplicationActive(isA(ApplicationId.class))).thenReturn(
-        false);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
+        createSpiedTask(fs, store, metrics, new ReentrantLock());
 
     // mock an evictable resource
     when(store.isResourceEvictable(isA(String.class), isA(FileStatus.class)))
@@ -124,8 +119,8 @@ public class TestCleanerTask {
     verify(metrics, never()).reportAFileProcess();
   }
 
-  private CleanerTask createSpiedTask(FileSystem fs, AppChecker appChecker,
-      SCMStore store, CleanerMetrics metrics, Lock isCleanerRunning) {
+  private CleanerTask createSpiedTask(FileSystem fs, SCMStore store,
+      CleanerMetrics metrics, Lock isCleanerRunning) {
     return spy(new CleanerTask(ROOT, SLEEP_TIME, NESTED_LEVEL, fs, store,
         metrics, isCleanerRunning));
   }
@@ -133,7 +128,6 @@ public class TestCleanerTask {
   @Test
   public void testResourceIsInUseHasAnActiveApp() throws Exception {
     FileSystem fs = mock(FileSystem.class);
-    AppChecker appChecker = mock(AppChecker.class);
     CleanerMetrics metrics = mock(CleanerMetrics.class);
     SCMStore store = mock(SCMStore.class);
 
@@ -146,7 +140,7 @@ public class TestCleanerTask {
     when(store.removeResource(isA(String.class))).thenReturn(false);
 
     CleanerTask task =
-        createSpiedTask(fs, appChecker, store, metrics, new ReentrantLock());
+        createSpiedTask(fs, store, metrics, new ReentrantLock());
 
     // process the resource
     task.processSingleResource(resource);

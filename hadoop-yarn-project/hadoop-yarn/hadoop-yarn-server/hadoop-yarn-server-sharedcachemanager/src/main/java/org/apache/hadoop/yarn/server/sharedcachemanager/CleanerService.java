@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -61,7 +60,6 @@ public class CleanerService extends CompositeService {
   private static final Log LOG = LogFactory.getLog(CleanerService.class);
 
   private Configuration conf;
-  private AppChecker appChecker;
   private CleanerMetrics metrics;
   private ScheduledExecutorService scheduledExecutor;
   private final SCMStore store;
@@ -76,9 +74,6 @@ public class CleanerService extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
-
-    appChecker = createAppCheckerService(conf);
-    addService(appChecker);
 
     // create scheduler executor service that services the cleaner tasks
     // use 2 threads to accommodate the on-demand tasks and reduce the chance of
@@ -130,11 +125,6 @@ public class CleanerService extends CompositeService {
     super.serviceStop();
   }
 
-  @VisibleForTesting
-  AppChecker createAppCheckerService(Configuration conf) {
-    return SharedCacheManager.createAppCheckerService(conf);
-  }
-
   /**
    * Execute an on-demand cleaner task.
    */
@@ -152,7 +142,7 @@ public class CleanerService extends CompositeService {
    * machine that owns the pid file.
    *
    * @return true if the pid file was written, false otherwise
-   * @throws IOException
+   * @throws YarnException
    */
   private boolean writeGlobalCleanerPidFile() throws YarnException {
     String root =

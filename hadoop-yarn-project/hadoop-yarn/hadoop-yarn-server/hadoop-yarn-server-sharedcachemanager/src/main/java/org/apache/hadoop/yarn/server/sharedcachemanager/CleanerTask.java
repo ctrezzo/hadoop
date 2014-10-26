@@ -107,7 +107,7 @@ class CleanerTask implements Runnable {
   @Override
   public void run() {
     if (!this.cleanerTaskLock.tryLock()) {
-      // this is a scheduled task and there is already another task running
+      // there is already another task running
       LOG.warn("A cleaner task is already running. "
           + "This scheduled cleaner task will do nothing.");
       return;
@@ -303,6 +303,6 @@ class CleanerTask implements Runnable {
     /** Resource was successfully deleted **/
     DELETED,
     /** The cleaner task ran into an error while processing the resource **/
-    ERROR;
+    ERROR
   }
 }
