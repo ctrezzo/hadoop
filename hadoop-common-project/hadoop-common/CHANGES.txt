@@ -368,13 +368,12 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)
+
     HADOOP-11166. Remove ulimit from test-patch.sh. (wang)
 
     HDFS-7227. Fix findbugs warning about NP_DEREFERENCE_OF_READLINE_VALUE in
     SpanReceiverHost (cmccabe)
-
-    HADOOP-11170. ZKDelegationTokenSecretManager fails to renewToken created by 
-    a peer. (Arun Suresh and Gregory Chanan via kasha)
 
 Release 2.6.0 - UNRELEASED
 
@@ -1010,6 +1009,9 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11228. Winutils task: unsecure path should not call
     AddNodeManagerAndUserACEsToObject. (Remus Rusanu via jianhe)
+
+    HADOOP-11170. ZKDelegationTokenSecretManager fails to renewToken created by 
+    a peer. (Arun Suresh and Gregory Chanan via kasha)
 
 Release 2.5.1 - 2014-09-05
 
