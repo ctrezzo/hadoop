@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * <p>
@@ -28,8 +28,8 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
  * the notification for.
  * </p>
  */
-@Public
-@Stable
+@Private
+@Unstable
 public abstract class NotifySCMResponse {
 
   /**
@@ -38,8 +38,6 @@ public abstract class NotifySCMResponse {
    *
    * @return boolean True if the resource has been accepted, false otherwise.
    */
-  @Public
-  @Stable
   public abstract boolean getAccepted();
 
   /**
@@ -48,8 +46,6 @@ public abstract class NotifySCMResponse {
    *
    * @param b True if the resource has been accepted, false otherwise.
    */
-  @Public
-  @Stable
   public abstract void setAccepted(boolean b);
 
 }

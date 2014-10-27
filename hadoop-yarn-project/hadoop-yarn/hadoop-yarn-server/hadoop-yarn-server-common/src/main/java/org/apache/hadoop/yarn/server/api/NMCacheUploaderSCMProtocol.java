@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.api;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMResponse;
@@ -33,8 +33,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMResponse;
  * <code>SharedCacheManager.</code>
  * </p>
  */
-@Public
-@Stable
+@Private
+@Unstable
 public interface NMCacheUploaderSCMProtocol {
   /**
    * <p>

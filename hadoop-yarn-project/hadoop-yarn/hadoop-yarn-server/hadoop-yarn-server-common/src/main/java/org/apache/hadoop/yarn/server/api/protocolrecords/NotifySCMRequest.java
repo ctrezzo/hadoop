@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * <p>
@@ -27,8 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
  * resource in the shared cache.
  * </p>
  */
-@Public
-@Stable
+@Private
+@Unstable
 public abstract class NotifySCMRequest {
 
   /**
@@ -37,8 +37,6 @@ public abstract class NotifySCMRequest {
    *
    * @return the filename
    */
-  @Public
-  @Stable
   public abstract String getFileName();
 
   /**
@@ -47,8 +45,6 @@ public abstract class NotifySCMRequest {
    *
    * @param filename the name of the file
    */
-  @Public
-  @Stable
   public abstract void setFilename(String filename);
 
   /**
@@ -57,8 +53,6 @@ public abstract class NotifySCMRequest {
    *
    * @return <code>key</code>
    */
-  @Public
-  @Stable
   public abstract String getResourceKey();
 
   /**
@@ -67,7 +61,5 @@ public abstract class NotifySCMRequest {
    *
    * @param key unique identifier for the resource
    */
-  @Public
-  @Stable
   public abstract void setResourceKey(String key);
 }
