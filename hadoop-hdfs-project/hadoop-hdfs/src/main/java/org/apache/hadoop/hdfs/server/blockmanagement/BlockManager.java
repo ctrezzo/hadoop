@@ -3075,9 +3075,11 @@ public class BlockManager {
             + " is received from " + nodeID);
       }
     }
-    blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
+    if (blockLog.isDebugEnabled()) {
+      blockLog.debug("*BLOCK* NameNode.processIncrementalBlockReport: " + "from "
         + nodeID + " receiving: " + receiving + ", " + " received: " + received
         + ", " + " deleted: " + deleted);
+    }
   }
 
   /**
@@ -3504,6 +3506,13 @@ public class BlockManager {
   public Collection<DatanodeDescriptor> getCorruptReplicas(Block block) {
     return corruptReplicas.getNodes(block);
   }
+
+ /**
+  * Get reason for certain corrupted replicas for a given block and a given dn.
+  */
+ public String getCorruptReason(Block block, DatanodeDescriptor node) {
+   return corruptReplicas.getCorruptReason(block, node);
+ }
 
   /** @return the size of UnderReplicatedBlocks */
   public int numOfUnderReplicatedBlocks() {

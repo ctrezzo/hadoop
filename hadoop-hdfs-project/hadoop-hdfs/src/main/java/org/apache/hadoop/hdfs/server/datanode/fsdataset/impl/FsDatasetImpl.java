@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -58,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
@@ -77,6 +81,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
+import org.apache.hadoop.hdfs.server.datanode.UnexpectedReplicaStateException;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
@@ -91,6 +96,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.metrics2.util.MBeans;
@@ -633,7 +639,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * Get the meta info of a block stored in volumeMap. To find a block,
    * block pool Id, block Id and generation stamp must match.
    * @param b extended block
-   * @return the meta replica information; null if block was not found
+   * @return the meta replica information
    * @throws ReplicaNotFoundException if no entry is in the map or 
    *                        there is a generation stamp mismatch
    */
@@ -721,21 +727,78 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final File destDir = DatanodeUtil.idToBlockDir(destRoot, blockId);
     final File dstFile = new File(destDir, srcFile.getName());
     final File dstMeta = FsDatasetUtil.getMetaFile(dstFile, genStamp);
-    try {
-      Storage.nativeCopyFileUnbuffered(srcMeta, dstMeta, true);
-    } catch (IOException e) {
-      throw new IOException("Failed to copy " + srcMeta + " to " + dstMeta, e);
-    }
+    computeChecksum(srcMeta, dstMeta, srcFile);
+
     try {
       Storage.nativeCopyFileUnbuffered(srcFile, dstFile, true);
     } catch (IOException e) {
       throw new IOException("Failed to copy " + srcFile + " to " + dstFile, e);
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Copied " + srcMeta + " to " + dstMeta);
+      LOG.debug("Copied " + srcMeta + " to " + dstMeta +
+          " and calculated checksum");
       LOG.debug("Copied " + srcFile + " to " + dstFile);
     }
     return new File[] {dstMeta, dstFile};
+  }
+
+  /**
+   * Compute and store the checksum for a block file that does not already have
+   * its checksum computed.
+   *
+   * @param srcMeta source meta file, containing only the checksum header, not a
+   *     calculated checksum
+   * @param dstMeta destination meta file, into which this method will write a
+   *     full computed checksum
+   * @param blockFile block file for which the checksum will be computed
+   * @throws IOException
+   */
+  private static void computeChecksum(File srcMeta, File dstMeta, File blockFile)
+      throws IOException {
+    final DataChecksum checksum = BlockMetadataHeader.readDataChecksum(srcMeta);
+    final byte[] data = new byte[1 << 16];
+    final byte[] crcs = new byte[checksum.getChecksumSize(data.length)];
+
+    DataOutputStream metaOut = null;
+    InputStream dataIn = null;
+    try {
+      File parentFile = dstMeta.getParentFile();
+      if (parentFile != null) {
+        if (!parentFile.mkdirs() && !parentFile.isDirectory()) {
+          throw new IOException("Destination '" + parentFile
+              + "' directory cannot be created");
+        }
+      }
+      metaOut = new DataOutputStream(new BufferedOutputStream(
+          new FileOutputStream(dstMeta), HdfsConstants.SMALL_BUFFER_SIZE));
+      BlockMetadataHeader.writeHeader(metaOut, checksum);
+
+      dataIn = isNativeIOAvailable ?
+          NativeIO.getShareDeleteFileInputStream(blockFile) :
+          new FileInputStream(blockFile);
+
+      int offset = 0;
+      for(int n; (n = dataIn.read(data, offset, data.length - offset)) != -1; ) {
+        if (n > 0) {
+          n += offset;
+          offset = n % checksum.getBytesPerChecksum();
+          final int length = n - offset;
+
+          if (length > 0) {
+            checksum.calculateChunkedSums(data, 0, length, crcs, 0);
+            metaOut.write(crcs, 0, checksum.getChecksumSize(length));
+
+            System.arraycopy(data, length, data, 0, offset);
+          }
+        }
+      }
+
+      // calculate and write the last crc
+      checksum.calculateChunkedSums(data, 0, offset, crcs, 0);
+      metaOut.write(crcs, 0, 4);
+    } finally {
+      IOUtils.cleanup(LOG, dataIn, metaOut);
+    }
   }
 
   static private void truncateBlock(File blockFile, File metaFile,
@@ -1390,6 +1453,45 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   /**
+   * Check if a block is valid.
+   *
+   * @param b           The block to check.
+   * @param minLength   The minimum length that the block must have.  May be 0.
+   * @param state       If this is null, it is ignored.  If it is non-null, we
+   *                        will check that the replica has this state.
+   *
+   * @throws ReplicaNotFoundException          If the replica is not found 
+   *
+   * @throws UnexpectedReplicaStateException   If the replica is not in the 
+   *                                             expected state.
+   * @throws FileNotFoundException             If the block file is not found or there
+   *                                              was an error locating it.
+   * @throws EOFException                      If the replica length is too short.
+   * 
+   * @throws IOException                       May be thrown from the methods called. 
+   */
+  public void checkBlock(ExtendedBlock b, long minLength, ReplicaState state)
+      throws ReplicaNotFoundException, UnexpectedReplicaStateException,
+      FileNotFoundException, EOFException, IOException {
+    final ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
+        b.getLocalBlock());
+    if (replicaInfo == null) {
+      throw new ReplicaNotFoundException(b);
+    }
+    if (replicaInfo.getState() != state) {
+      throw new UnexpectedReplicaStateException(b,state);
+    }
+    if (!replicaInfo.getBlockFile().exists()) {
+      throw new FileNotFoundException(replicaInfo.getBlockFile().getPath());
+    }
+    long onDiskLength = getLength(b);
+    if (onDiskLength < minLength) {
+      throw new EOFException(b + "'s on-disk length " + onDiskLength
+          + " is shorter than minLength " + minLength);
+    }
+  }
+
+  /**
    * Check whether the given block is a valid one.
    * valid means finalized
    */
@@ -1397,7 +1499,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public boolean isValidBlock(ExtendedBlock b) {
     return isValid(b, ReplicaState.FINALIZED);
   }
-
+  
   /**
    * Check whether the given block is a valid RBW.
    */
@@ -1408,11 +1510,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   /** Does the block exist and have the given state? */
   private boolean isValid(final ExtendedBlock b, final ReplicaState state) {
-    final ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
-        b.getLocalBlock());
-    return replicaInfo != null
-        && replicaInfo.getState() == state
-        && replicaInfo.getBlockFile().exists();
+    try {
+      checkBlock(b, 0, state);
+    } catch (IOException e) {
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -1640,6 +1743,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  @Override
   public boolean isCached(String bpid, long blockId) {
     return cacheManager.isCached(bpid, blockId);
   }
@@ -2555,8 +2659,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         // Before deleting the files from transient storage we must notify the
         // NN that the files are on the new storage. Else a blockReport from
         // the transient storage might cause the NN to think the blocks are lost.
+        // Replicas must be evicted from client short-circuit caches, because the
+        // storage will no longer be transient, and thus will require validating
+        // checksum.  This also stops a client from holding file descriptors,
+        // which would prevent the OS from reclaiming the memory.
         ExtendedBlock extendedBlock =
             new ExtendedBlock(bpid, newReplicaInfo);
+        datanode.getShortCircuitRegistry().processBlockInvalidation(
+            ExtendedBlockId.fromExtendedBlock(extendedBlock));
         datanode.notifyNamenodeReceivedBlock(
             extendedBlock, null, newReplicaInfo.getStorageUuid());
 

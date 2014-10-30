@@ -252,12 +252,17 @@ Trunk (Unreleased)
 
     HDFS-7204. balancer doesn't run as a daemon (aw)
 
-
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    
+    HDFS-7278. Add a command that allows sysadmins to manually trigger full
+    block reports from a DN (cmccabe)
+
+    HDFS-6663. Admin command to track file and locations from block id.
+    (Chen He via kihwal)
 
   IMPROVEMENTS
 
@@ -306,9 +311,23 @@ Release 2.7.0 - UNRELEASED
     HDFS-7283. Bump DataNode OOM log from WARN to ERROR.
     (Stephen Chu via wheat9)
 
+    HDFS-5928. Show namespace and namenode ID on NN dfshealth page.
+    (Siqi Li via wheat9)
+
+    HDFS-7213. processIncrementalBlockReport performance degradation.
+    (Eric Payne via kihwal)
+
+    HDFS-7280. Use netty 4 in WebImageViewer. (wheat9)
+
+    HDFS-3342. SocketTimeoutException in BlockSender.sendChunks could
+    have a better error message. (Yongjun Zhang via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-6741. Improve permission denied message when
+    FSPermissionChecker#checkOwner fails (Stephen Chu and harsh).
 
     HDFS-6538. Comment format error in ShortCircuitRegistry javadoc.
     (David Luo via harsh).
@@ -342,6 +361,16 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7258. CacheReplicationMonitor rescan schedule log should use DEBUG
     level instead of INFO level. (Xiaoyu Yao via wheat9)
+
+    HDFS-7282. Fix intermittent TestShortCircuitCache and
+    TestBlockReaderFactory failures resulting from TemporarySocketDirectory GC.
+    (Jinghui Wang via Colin Patrick McCabe)
+
+    HDFS-7235. DataNode#transferBlock should report blocks that don't exist
+    using reportBadBlock (yzhang via cmccabe)
+
+    HDFS-7263. Snapshot read can reveal future bytes for appended files.
+    (Tao Luo via shv)
 
 Release 2.6.0 - UNRELEASED
 
@@ -637,6 +666,8 @@ Release 2.6.0 - UNRELEASED
     HDFS-6988. Improve HDFS-6581 eviction configuration (Xiaoyu Yao via Colin
     P. McCabe)
 
+    HDFS-7230. Add rolling downgrade documentation. (szetszwo via jing9)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -649,6 +680,8 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7122. Use of ThreadLocal<Random> results in poor block placement.
     (wang)
+
+    HDFS-6606. Optimize HDFS Encrypted Transport performance. (yliu)
 
   BUG FIXES
 
@@ -930,6 +963,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-7243. HDFS concat operation should not be allowed in Encryption Zone.
     (clamb via yliu)
 
+    HADOOP-11233. hadoop.security.kms.client.encrypted.key.cache.expiry
+    property spelled wrong in core-default. (Stephen Chu via yliu) 
+
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
       HDFS-6387. HDFS CLI admin tool for creating & deleting an
@@ -1082,6 +1118,14 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7128. Decommission slows way down when it gets towards the end.
     (Ming Ma via cnauroth)
+
+    HDFS-7287. The OfflineImageViewer (OIV) can output invalid XML depending on
+    the filename (Ravi Prakash via Colin P. McCabe)
+
+    HDFS-7300. The getMaxNodesPerRack() method in BlockPlacementPolicyDefault
+    is flawed (kihwal)
+
+    HDFS-7305. NPE seen in wbhdfs FS while running SLive. (jing9)
 
   BREAKDOWN OF HDFS-6584 ARCHIVAL STORAGE
 
@@ -1273,6 +1317,14 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7090. Use unbuffered writes when persisting in-memory replicas.
     (Xiaoyu Yao via cnauroth)
+
+    HDFS-6934. Move checksum computation off the hot path when writing to RAM
+    disk. (cnauroth)
+
+    HDFS-7291. Persist in-memory replicas with appropriate unbuffered copy API
+    on POSIX and Windows. (Xiaoyu Yao via cnauroth)
+
+    HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
 
 Release 2.5.1 - 2014-09-05
 

@@ -56,7 +56,9 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -96,6 +98,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.BlockReportOptions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
@@ -1069,8 +1072,8 @@ public class DataNode extends ReconfigurableBase
     // Create the ReadaheadPool from the DataNode context so we can
     // exit without having to explicitly shutdown its thread pool.
     readaheadPool = ReadaheadPool.getInstance();
-    saslClient = new SaslDataTransferClient(dnConf.saslPropsResolver,
-      dnConf.trustedChannelResolver);
+    saslClient = new SaslDataTransferClient(dnConf.conf, 
+        dnConf.saslPropsResolver, dnConf.trustedChannelResolver);
     saslServer = new SaslDataTransferServer(dnConf, blockPoolTokenSecretManager);
   }
 
@@ -1767,30 +1770,59 @@ public class DataNode extends ReconfigurableBase
   int getXmitsInProgress() {
     return xmitsInProgress.get();
   }
-    
+
+  private void reportBadBlock(final BPOfferService bpos,
+      final ExtendedBlock block, final String msg) {
+    FsVolumeSpi volume = getFSDataset().getVolume(block);
+    bpos.reportBadBlocks(
+        block, volume.getStorageID(), volume.getStorageType());
+    LOG.warn(msg);
+  }
+
   private void transferBlock(ExtendedBlock block, DatanodeInfo[] xferTargets,
       StorageType[] xferTargetStorageTypes) throws IOException {
     BPOfferService bpos = getBPOSForBlock(block);
     DatanodeRegistration bpReg = getDNRegistrationForBP(block.getBlockPoolId());
-    
-    if (!data.isValidBlock(block)) {
-      // block does not exist or is under-construction
+
+    boolean replicaNotExist = false;
+    boolean replicaStateNotFinalized = false;
+    boolean blockFileNotExist = false;
+    boolean lengthTooShort = false;
+
+    try {
+      data.checkBlock(block, block.getNumBytes(), ReplicaState.FINALIZED);
+    } catch (ReplicaNotFoundException e) {
+      replicaNotExist = true;
+    } catch (UnexpectedReplicaStateException e) {
+      replicaStateNotFinalized = true;
+    } catch (FileNotFoundException e) {
+      blockFileNotExist = true;
+    } catch (EOFException e) {
+      lengthTooShort = true;
+    } catch (IOException e) {
+      // The IOException indicates not being able to access block file,
+      // treat it the same here as blockFileNotExist, to trigger 
+      // reporting it as a bad block
+      blockFileNotExist = true;      
+    }
+
+    if (replicaNotExist || replicaStateNotFinalized) {
       String errStr = "Can't send invalid block " + block;
       LOG.info(errStr);
-      
       bpos.trySendErrorReport(DatanodeProtocol.INVALID_BLOCK, errStr);
       return;
     }
-
-    // Check if NN recorded length matches on-disk length 
-    long onDiskLength = data.getLength(block);
-    if (block.getNumBytes() > onDiskLength) {
-      FsVolumeSpi volume = getFSDataset().getVolume(block);
+    if (blockFileNotExist) {
+      // Report back to NN bad block caused by non-existent block file.
+      reportBadBlock(bpos, block, "Can't replicate block " + block
+          + " because the block file doesn't exist, or is not accessible");
+      return;
+    }
+    if (lengthTooShort) {
+      // Check if NN recorded length matches on-disk length 
       // Shorter on-disk len indicates corruption so report NN the corrupt block
-      bpos.reportBadBlocks(
-          block, volume.getStorageID(), volume.getStorageType());
-      LOG.warn("Can't replicate block " + block
-          + " because on-disk length " + onDiskLength 
+      reportBadBlock(bpos, block, "Can't replicate block " + block
+          + " because on-disk length " + data.getLength(block) 
           + " is shorter than NameNode recorded length " + block.getNumBytes());
       return;
     }
@@ -2899,6 +2931,19 @@ public class DataNode extends ReconfigurableBase
   public ReconfigurationTaskStatus getReconfigurationStatus() throws IOException {
     checkSuperuserPrivilege();
     return getReconfigurationTaskStatus();
+  }
+
+  @Override // ClientDatanodeProtocol
+  public void triggerBlockReport(BlockReportOptions options)
+      throws IOException {
+    checkSuperuserPrivilege();
+    for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+      if (bpos != null) {
+        for (BPServiceActor actor : bpos.getBPServiceActors()) {
+          actor.triggerBlockReport(options);
+        }
+      }
+    }
   }
 
   /**

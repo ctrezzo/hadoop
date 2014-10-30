@@ -53,6 +53,12 @@ Release 2.7.0 - UNRELEASED
     YARN-2641. Decommission nodes on -refreshNodes instead of next 
     NM-RM heartbeat. (Zhihai Xu via kasha)
 
+    YARN-2742. FairSchedulerConfiguration should allow extra spaces
+    between value and unit. (Wei Yan via kasha)
+
+    YARN-2712. TestWorkPreservingRMRestart: Augment FS tests with
+    queue and headroom checks. (Tsuyoshi Ozawa via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -400,6 +406,17 @@ Release 2.6.0 - UNRELEASED
     YARN-2703. Added logUploadedTime into LogValue for better display. (Xuan Gong
     via zjshen)
 
+    YARN-2704. Changed ResourceManager to optionally obtain tokens itself for the
+    sake of localization and log-aggregation for long-running services. (Jian He
+    via vinodkv)
+
+    YARN-2502. Changed DistributedShell to support node labels. (Wangda Tan via
+    jianhe)
+
+    YARN-2760. Remove 'experimental' from FairScheduler docs. (Harsh J via kasha)
+
+    YARN-2503. Added node lablels in web UI. (Wangda Tan via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -705,6 +722,9 @@ Release 2.6.0 - UNRELEASED
     YARN-2700 TestSecureRMRegistryOperations failing on windows: auth problems
     (stevel)
 
+    YARN-2677 registry punycoding of usernames doesn't fix all usernames to be
+    DNS-valid (stevel)
+
     ---
 
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
@@ -762,6 +782,30 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2734. Skipped sub-folders in the local log dir when aggregating logs.
     (Xuan Gong via zjshen)
+
+    YARN-2726. CapacityScheduler should explicitly log when an accessible
+    label has no capacity. (Wangda Tan via xgong)
+
+    YARN-2591. Fixed AHSWebServices to return FORBIDDEN(403) if the request user
+    doesn't have access to the history data. (Zhijie Shen via jianhe)
+
+    YARN-2279. Add UTs to cover timeline server authentication.
+    (Zhijie Shen via xgong)
+
+    YARN-2758. Update TestApplicationHistoryClientService to use the new generic
+    history store. (Zhijie Shen via xgong)
+
+    YARN-2741. Made NM web UI serve logs on the drive other than C: on Windows. (Craig
+    Welch via zjshen)
+
+    YARN-2747. Fixed the test failure of TestAggregatedLogFormat when native I/O is
+    enabled. (Xuan Gong via zjshen)
+
+    YARN-2769. Fixed the problem that timeline domain is not set in distributed shell
+    AM when using shell_command on Windows. (Varun Vasudev via zjshen)
+
+    YARN-2755. NM fails to clean up usercache_DEL_<timestamp> dirs after
+    YARN-661 (Siqi Li via jlowe)
 
 Release 2.5.1 - 2014-09-05
 

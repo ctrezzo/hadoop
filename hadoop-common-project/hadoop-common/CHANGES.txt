@@ -375,6 +375,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-7227. Fix findbugs warning about NP_DEREFERENCE_OF_READLINE_VALUE in
     SpanReceiverHost (cmccabe)
 
+    HADOOP-11186. documentation should talk about
+    hadoop.htrace.spanreceiver.classes, not hadoop.trace.spanreceiver.classes (cmccabe)
+
 Release 2.6.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -611,6 +614,8 @@ Release 2.6.0 - UNRELEASED
     proxy-users on Delegation-token management operations. (Zhijie Shen via
     vinodkv)
 
+    HADOOP-11216. Improve Openssl library finding. (cmccabe via yliu)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
@@ -673,6 +678,11 @@ Release 2.6.0 - UNRELEASED
     codecs. (Gopal Vijayaraghavan via acmurthy)
 
     HADOOP-11194. Ignore .keep files. (kasha)
+
+    HADOOP-11195. Move Id-Name mapping in NFS to the hadoop-common area for
+    better maintenance (Yongjun Zhang via brandonli)
+
+    HADOOP-11247. Fix a couple javac warnings in NFS. (Brandon Li via wheat9)
 
   BUG FIXES
 
@@ -1012,6 +1022,19 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11170. ZKDelegationTokenSecretManager fails to renewToken created by 
     a peer. (Arun Suresh and Gregory Chanan via kasha)
+
+    HADOOP-11217. Disable SSLv3 in KMS. (Robert Kanter via kasha)
+
+    HADOOP-11243. SSLFactory shouldn't allow SSLv3. (Wei Yan via kasha)
+
+    HADOOP-11068. Match hadoop.auth cookie format to jetty output.
+    (Gregory Chanan via cnauroth)
+
+    HADOOP-11250. fix endmacro of set_find_shared_library_without_version in
+    CMakeLists (Yi Liu via Colin P. McCabe)
+
+    HADOOP-11221. IdentityHashStore assumes System.identityHashCode() is
+    non-negative. (Jinghui Wang via szetszwo)
 
 Release 2.5.1 - 2014-09-05
 

@@ -242,6 +242,9 @@ Release 2.6.0 - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-5933. Enabled MR AM to post history events to the timeline server.
+    (Robert Kanter via zjshen)
+
   IMPROVEMENTS
 
     MAPREDUCE-5971. Move the default options for distcp -p to
@@ -276,6 +279,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-5970. Provide a boolean switch to enable MR-AM profiling (Gera
     Shegalov via jlowe)
+
+    MAPREDUCE-6018. Added an MR specific config to enable emitting job history
+    data to the timeline server. (Robert Kanter via zjshen)
 
   OPTIMIZATIONS
 
@@ -440,6 +446,12 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6126. Fixed Rumen JobBuilder to ignore NormalizedResourceEvent.
     (Junping Du via jianhe)
+
+    MAPREDUCE-6142. Fixed test failures in TestJobHistoryEventHandler and
+    TestMRTimelineEventHandling. (Zhijie Shen via vinodkv)
+
+    MAPREDUCE-6022. map_input_file is missing from streaming job environment.
+    (jlowe via kihwal)
 
 Release 2.5.1 - 2014-09-05
 
