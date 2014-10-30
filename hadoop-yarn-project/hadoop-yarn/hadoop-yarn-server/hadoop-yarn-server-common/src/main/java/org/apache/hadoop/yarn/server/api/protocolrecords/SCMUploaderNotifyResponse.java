@@ -23,43 +23,29 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * <p>
- * The request from clients to the <code>SharedCacheManager</code> that claims a
- * resource in the shared cache.
+ * The response from the SharedCacheManager to the NodeManager that indicates
+ * whether the NodeManager needs to delete the cached resource it was sending
+ * the notification for.
  * </p>
  */
 @Private
 @Unstable
-public abstract class NotifySCMRequest {
+public abstract class SCMUploaderNotifyResponse {
 
   /**
-   * Get the filename of the resource that was just uploaded to the shared
-   * cache.
+   * Get whether or not the shared cache manager has accepted the notified
+   * resource (i.e. the uploaded file should remain in the cache).
    *
-   * @return the filename
+   * @return boolean True if the resource has been accepted, false otherwise.
    */
-  public abstract String getFileName();
+  public abstract boolean getAccepted();
 
   /**
-   * Set the filename of the resource that was just uploaded to the shared
-   * cache.
+   * Set whether or not the shared cache manager has accepted the notified
+   * resource (i.e. the uploaded file should remain in the cache).
    *
-   * @param filename the name of the file
+   * @param b True if the resource has been accepted, false otherwise.
    */
-  public abstract void setFilename(String filename);
+  public abstract void setAccepted(boolean b);
 
-  /**
-   * Get the <code>key</code> of the resource that was just uploaded to the
-   * shared cache.
-   *
-   * @return <code>key</code>
-   */
-  public abstract String getResourceKey();
-
-  /**
-   * Set the <code>key</code> of the resource that was just uploaded to the
-   * shared cache.
-   *
-   * @param key unique identifier for the resource
-   */
-  public abstract void setResourceKey(String key);
 }

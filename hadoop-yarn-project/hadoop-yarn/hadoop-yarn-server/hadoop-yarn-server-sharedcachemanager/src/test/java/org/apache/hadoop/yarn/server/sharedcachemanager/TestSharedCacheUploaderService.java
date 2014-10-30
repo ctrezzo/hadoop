@@ -35,9 +35,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.server.api.NMCacheUploaderSCMProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMRequest;
-import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.NMCacheUploaderSCMProtocolMetrics;
+import org.apache.hadoop.yarn.server.api.SCMUploaderProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyRequest;
+import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.SharedCacheUploaderMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SharedCacheResourceReference;
@@ -51,13 +51,13 @@ import org.junit.Test;
 /**
  * Basic unit tests for the NodeManger to SCM Protocol Service.
  */
-public class TestNMCacheUploaderSCMProtocolService {
+public class TestSharedCacheUploaderService {
   private static File testDir = null;
 
   @BeforeClass
   public static void setupTestDirs() throws IOException {
     testDir = new File("target",
-        TestNMCacheUploaderSCMProtocolService.class.getCanonicalName());
+        TestSharedCacheUploaderService.class.getCanonicalName());
     testDir.delete();
     testDir.mkdirs();
     testDir = testDir.getAbsoluteFile();
@@ -70,8 +70,8 @@ public class TestNMCacheUploaderSCMProtocolService {
     }
   }
 
-  private NMCacheUploaderSCMProtocolService service;
-  private NMCacheUploaderSCMProtocol proxy;
+  private SharedCacheUploaderService service;
+  private SCMUploaderProtocol proxy;
   private SCMStore store;
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -87,20 +87,20 @@ public class TestNMCacheUploaderSCMProtocolService {
     store.init(conf);
     store.start();
 
-    service = new NMCacheUploaderSCMProtocolService(store);
+    service = new SharedCacheUploaderService(store);
     service.init(conf);
     service.start();
 
     YarnRPC rpc = YarnRPC.create(new Configuration());
 
     InetSocketAddress scmAddress =
-        conf.getSocketAddr(YarnConfiguration.NM_SCM_ADDRESS,
-            YarnConfiguration.DEFAULT_NM_SCM_ADDRESS,
-            YarnConfiguration.DEFAULT_NM_SCM_PORT);
+        conf.getSocketAddr(YarnConfiguration.SCM_UPLOADER_SERVER_ADDRESS,
+            YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_ADDRESS,
+            YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_PORT);
 
     proxy =
-        (NMCacheUploaderSCMProtocol) rpc.getProxy(
-            NMCacheUploaderSCMProtocol.class, scmAddress, conf);
+        (SCMUploaderProtocol) rpc.getProxy(
+            SCMUploaderProtocol.class, scmAddress, conf);
   }
 
   @After
@@ -121,10 +121,10 @@ public class TestNMCacheUploaderSCMProtocolService {
   @Test
   public void testNotify_noEntry() throws Exception {
     long accepted =
-        NMCacheUploaderSCMProtocolMetrics.getInstance().getAcceptedUploads();
+        SharedCacheUploaderMetrics.getInstance().getAcceptedUploads();
 
-    NotifySCMRequest request =
-        recordFactory.newRecordInstance(NotifySCMRequest.class);
+    SCMUploaderNotifyRequest request =
+        recordFactory.newRecordInstance(SCMUploaderNotifyRequest.class);
     request.setResourceKey("key1");
     request.setFilename("foo.jar");
     assertTrue(proxy.notify(request).getAccepted());
@@ -135,7 +135,7 @@ public class TestNMCacheUploaderSCMProtocolService {
 
     assertEquals(
         "NM upload metrics aren't updated.", 1,
-        NMCacheUploaderSCMProtocolMetrics.getInstance().getAcceptedUploads() -
+        SharedCacheUploaderMetrics.getInstance().getAcceptedUploads() -
             accepted);
 
   }
@@ -144,11 +144,11 @@ public class TestNMCacheUploaderSCMProtocolService {
   public void testNotify_entryExists_differentName() throws Exception {
 
     long rejected =
-        NMCacheUploaderSCMProtocolMetrics.getInstance().getRejectUploads();
+        SharedCacheUploaderMetrics.getInstance().getRejectUploads();
 
     store.addResource("key1", "foo.jar");
-    NotifySCMRequest request =
-        recordFactory.newRecordInstance(NotifySCMRequest.class);
+    SCMUploaderNotifyRequest request =
+        recordFactory.newRecordInstance(SCMUploaderNotifyRequest.class);
     request.setResourceKey("key1");
     request.setFilename("foobar.jar");
     assertFalse(proxy.notify(request).getAccepted());
@@ -158,7 +158,7 @@ public class TestNMCacheUploaderSCMProtocolService {
     assertEquals(0, set.size());
     assertEquals(
         "NM upload metrics aren't updated.", 1,
-        NMCacheUploaderSCMProtocolMetrics.getInstance().getRejectUploads() -
+        SharedCacheUploaderMetrics.getInstance().getRejectUploads() -
             rejected);
 
   }
@@ -167,11 +167,11 @@ public class TestNMCacheUploaderSCMProtocolService {
   public void testNotify_entryExists_sameName() throws Exception {
 
     long accepted =
-        NMCacheUploaderSCMProtocolMetrics.getInstance().getAcceptedUploads();
+        SharedCacheUploaderMetrics.getInstance().getAcceptedUploads();
 
     store.addResource("key1", "foo.jar");
-    NotifySCMRequest request =
-        recordFactory.newRecordInstance(NotifySCMRequest.class);
+    SCMUploaderNotifyRequest request =
+        recordFactory.newRecordInstance(SCMUploaderNotifyRequest.class);
     request.setResourceKey("key1");
     request.setFilename("foo.jar");
     assertTrue(proxy.notify(request).getAccepted());
@@ -181,7 +181,7 @@ public class TestNMCacheUploaderSCMProtocolService {
     assertEquals(0, set.size());
     assertEquals(
         "NM upload metrics aren't updated.", 1,
-        NMCacheUploaderSCMProtocolMetrics.getInstance().getAcceptedUploads() -
+        SharedCacheUploaderMetrics.getInstance().getAcceptedUploads() -
             accepted);
 
   }

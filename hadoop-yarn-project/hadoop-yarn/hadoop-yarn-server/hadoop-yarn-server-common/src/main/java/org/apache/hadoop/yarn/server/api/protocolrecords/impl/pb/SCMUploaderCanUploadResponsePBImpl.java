@@ -18,28 +18,28 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NotifySCMResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NotifySCMResponseProtoOrBuilder;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMResponse;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SCMUploaderCanUploadResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SCMUploaderCanUploadResponseProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderCanUploadResponse;
 
-public class NotifySCMResponsePBImpl extends
- NotifySCMResponse {
-  NotifySCMResponseProto proto = NotifySCMResponseProto
-      .getDefaultInstance();
-  NotifySCMResponseProto.Builder builder = null;
+public class SCMUploaderCanUploadResponsePBImpl
+    extends SCMUploaderCanUploadResponse {
+  SCMUploaderCanUploadResponseProto proto =
+      SCMUploaderCanUploadResponseProto.getDefaultInstance();
+  SCMUploaderCanUploadResponseProto.Builder builder = null;
   boolean viaProto = false;
 
-  public NotifySCMResponsePBImpl() {
-    builder = NotifySCMResponseProto.newBuilder();
+  public SCMUploaderCanUploadResponsePBImpl() {
+    builder = SCMUploaderCanUploadResponseProto.newBuilder();
   }
 
-  public NotifySCMResponsePBImpl(
-NotifySCMResponseProto proto) {
+  public SCMUploaderCanUploadResponsePBImpl(
+      SCMUploaderCanUploadResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public NotifySCMResponseProto getProto() {
+  public SCMUploaderCanUploadResponseProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -48,8 +48,8 @@ NotifySCMResponseProto proto) {
 
   @Override
   public boolean getAccepted() {
-    NotifySCMResponseProtoOrBuilder p = viaProto ? proto : builder;
-    // Default to true, when in doubt just leave the file in the cache
+    SCMUploaderCanUploadResponseProtoOrBuilder p = viaProto ? proto : builder;
+    // Default to true, when in doubt allow the upload
     return (p.hasAccepted()) ? p.getAccepted() : true;
   }
 
@@ -68,7 +68,7 @@ NotifySCMResponseProto proto) {
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = NotifySCMResponseProto.newBuilder(proto);
+      builder = SCMUploaderCanUploadResponseProto.newBuilder(proto);
     }
     viaProto = false;
   }

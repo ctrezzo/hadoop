@@ -1442,19 +1442,19 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_SCM_CLEANER_RESOURCE_SLEEP_MS = 0L;
 
   /** The address of the node manager interface in the SCM. */
-  public static final String NM_SCM_ADDRESS = SHARED_CACHE_PREFIX
-      + "nodemanager.address";
-  public static final int DEFAULT_NM_SCM_PORT = 8046;
-  public static final String DEFAULT_NM_SCM_ADDRESS = "0.0.0.0:"
-      + DEFAULT_NM_SCM_PORT;
+  public static final String SCM_UPLOADER_SERVER_ADDRESS = SHARED_CACHE_PREFIX
+      + "uploader.server.address";
+  public static final int DEFAULT_SCM_UPLOADER_SERVER_PORT = 8046;
+  public static final String DEFAULT_SCM_UPLOADER_SERVER_ADDRESS = "0.0.0.0:"
+      + DEFAULT_SCM_UPLOADER_SERVER_PORT;
 
   /**
    * The number of SCM threads used to handle notify requests from the node
    * manager.
    */
-  public static final String SCM_NM_THREAD_COUNT = SHARED_CACHE_PREFIX
-      + "nodemanager.thread-count";
-  public static final int DEFAULT_SCM_NM_THREAD_COUNT = 50;
+  public static final String SCM_UPLOADER_SERVER_THREAD_COUNT =
+      SHARED_CACHE_PREFIX + "uploader.server.thread-count";
+  public static final int DEFAULT_SCM_UPLOADER_SERVER_THREAD_COUNT = 50;
 
   ////////////////////////////////
   // Other Configs

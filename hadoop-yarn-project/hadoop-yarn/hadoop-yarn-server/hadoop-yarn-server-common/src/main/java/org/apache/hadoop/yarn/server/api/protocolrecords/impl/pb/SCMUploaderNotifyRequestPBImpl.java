@@ -18,27 +18,27 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NotifySCMRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NotifySCMRequestProtoOrBuilder;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMRequest;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SCMUploaderNotifyRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.SCMUploaderNotifyRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyRequest;
 
-public class NotifySCMRequestPBImpl extends
- NotifySCMRequest {
-  NotifySCMRequestProto proto = NotifySCMRequestProto
-      .getDefaultInstance();
-  NotifySCMRequestProto.Builder builder = null;
+public class SCMUploaderNotifyRequestPBImpl extends SCMUploaderNotifyRequest {
+  SCMUploaderNotifyRequestProto proto =
+      SCMUploaderNotifyRequestProto.getDefaultInstance();
+  SCMUploaderNotifyRequestProto.Builder builder = null;
   boolean viaProto = false;
 
-  public NotifySCMRequestPBImpl() {
-    builder = NotifySCMRequestProto.newBuilder();
+  public SCMUploaderNotifyRequestPBImpl() {
+    builder = SCMUploaderNotifyRequestProto.newBuilder();
   }
 
-  public NotifySCMRequestPBImpl(NotifySCMRequestProto proto) {
+  public SCMUploaderNotifyRequestPBImpl(
+      SCMUploaderNotifyRequestProto proto) {
     this.proto = proto;
     viaProto = true;
   }
 
-  public NotifySCMRequestProto getProto() {
+  public SCMUploaderNotifyRequestProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -47,7 +47,7 @@ public class NotifySCMRequestPBImpl extends
 
   @Override
   public String getResourceKey() {
-    NotifySCMRequestProtoOrBuilder p = viaProto ? proto : builder;
+    SCMUploaderNotifyRequestProtoOrBuilder p = viaProto ? proto : builder;
     return (p.hasResourceKey()) ? p.getResourceKey() : null;
   }
 
@@ -63,7 +63,7 @@ public class NotifySCMRequestPBImpl extends
 
   @Override
   public String getFileName() {
-    NotifySCMRequestProtoOrBuilder p = viaProto ? proto : builder;
+    SCMUploaderNotifyRequestProtoOrBuilder p = viaProto ? proto : builder;
     return (p.hasFilename()) ? p.getFilename() : null;
   }
 
@@ -86,7 +86,7 @@ public class NotifySCMRequestPBImpl extends
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = NotifySCMRequestProto.newBuilder(proto);
+      builder = SCMUploaderNotifyRequestProto.newBuilder(proto);
     }
     viaProto = false;
   }

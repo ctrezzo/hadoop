@@ -67,7 +67,7 @@ public class SharedCacheManager extends CompositeService {
     CleanerService cs = createCleanerService(store);
     addService(cs);
 
-    NMCacheUploaderSCMProtocolService nms =
+    SharedCacheUploaderService nms =
         createNMCacheUploaderSCMProtocolService(store);
     addService(nms);
 
@@ -101,9 +101,9 @@ public class SharedCacheManager extends CompositeService {
     return new CleanerService(store);
   }
 
-  private NMCacheUploaderSCMProtocolService
+  private SharedCacheUploaderService
       createNMCacheUploaderSCMProtocolService(SCMStore store) {
-    return new NMCacheUploaderSCMProtocolService(store);
+    return new SharedCacheUploaderService(store);
   }
 
   @Override

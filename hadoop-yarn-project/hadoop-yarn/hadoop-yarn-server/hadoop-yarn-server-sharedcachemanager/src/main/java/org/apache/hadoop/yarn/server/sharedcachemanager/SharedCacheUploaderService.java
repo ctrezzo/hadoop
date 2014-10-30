@@ -29,28 +29,30 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.server.api.NMCacheUploaderSCMProtocol;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMResponse;
-import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.NMCacheUploaderSCMProtocolMetrics;
+import org.apache.hadoop.yarn.server.api.SCMUploaderProtocol;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderCanUploadRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderCanUploadResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyResponse;
+import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.SharedCacheUploaderMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.SCMStore;
 
 /**
  * This service handles all rpc calls from the NodeManager uploader to the
  * shared cache manager.
  */
-public class NMCacheUploaderSCMProtocolService extends AbstractService
-    implements NMCacheUploaderSCMProtocol {
+public class SharedCacheUploaderService extends AbstractService
+    implements SCMUploaderProtocol {
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
   private Server server;
   InetSocketAddress bindAddress;
   private final SCMStore store;
-  private NMCacheUploaderSCMProtocolMetrics metrics;
+  private SharedCacheUploaderMetrics metrics;
 
-  public NMCacheUploaderSCMProtocolService(SCMStore store) {
-    super(NMCacheUploaderSCMProtocolService.class.getName());
+  public SharedCacheUploaderService(SCMStore store) {
+    super(SharedCacheUploaderService.class.getName());
     this.store = store;
   }
 
@@ -62,28 +64,28 @@ public class NMCacheUploaderSCMProtocolService extends AbstractService
   }
 
   InetSocketAddress getBindAddress(Configuration conf) {
-    return conf.getSocketAddr(YarnConfiguration.NM_SCM_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_SCM_ADDRESS,
-        YarnConfiguration.DEFAULT_NM_SCM_PORT);
+    return conf.getSocketAddr(YarnConfiguration.SCM_UPLOADER_SERVER_ADDRESS,
+        YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_ADDRESS,
+        YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_PORT);
   }
 
   @Override
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
-    this.metrics = NMCacheUploaderSCMProtocolMetrics.initSingleton(conf);
+    this.metrics = SharedCacheUploaderMetrics.initSingleton(conf);
 
     YarnRPC rpc = YarnRPC.create(conf);
     this.server =
-        rpc.getServer(NMCacheUploaderSCMProtocol.class, this, bindAddress,
+        rpc.getServer(SCMUploaderProtocol.class, this, bindAddress,
             conf, null, // Secret manager null for now (security not supported)
-            conf.getInt(YarnConfiguration.SCM_NM_THREAD_COUNT,
-                YarnConfiguration.DEFAULT_SCM_NM_THREAD_COUNT));
+            conf.getInt(YarnConfiguration.SCM_UPLOADER_SERVER_THREAD_COUNT,
+                YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_THREAD_COUNT));
 
     // TODO: Enable service authorization
 
     this.server.start();
     bindAddress =
-        conf.updateConnectAddr(YarnConfiguration.NM_SCM_ADDRESS,
+        conf.updateConnectAddr(YarnConfiguration.SCM_UPLOADER_SERVER_ADDRESS,
             server.getListenerAddress());
 
     super.serviceStart();
@@ -93,18 +95,19 @@ public class NMCacheUploaderSCMProtocolService extends AbstractService
   protected void serviceStop() throws Exception {
     if (this.server != null) {
       this.server.stop();
+      this.server = null;
     }
 
     super.serviceStop();
   }
 
   @Override
-  public NotifySCMResponse notify(NotifySCMRequest request)
+  public SCMUploaderNotifyResponse notify(SCMUploaderNotifyRequest request)
       throws YarnException, IOException {
-    NotifySCMResponse response =
-        recordFactory.newRecordInstance(NotifySCMResponse.class);
+    SCMUploaderNotifyResponse response =
+        recordFactory.newRecordInstance(SCMUploaderNotifyResponse.class);
 
-    // TODO: Security/authorization
+    // TODO proper security/authorization needs to be implemented (YARN-2774)
 
     String filename =
         store.addResource(request.getResourceKey(), request.getFileName());
@@ -119,6 +122,18 @@ public class NMCacheUploaderSCMProtocolService extends AbstractService
 
     response.setAccepted(accepted);
 
+    return response;
+  }
+
+  @Override
+  public SCMUploaderCanUploadResponse canUpload(
+      SCMUploaderCanUploadRequest request) throws YarnException, IOException {
+    // TODO we may want to have a more flexible policy of instructing the node
+    // manager to upload only if it meets a certain criteria (YARN-2781)
+    // until then we return true for now
+    SCMUploaderCanUploadResponse response =
+        recordFactory.newRecordInstance(SCMUploaderCanUploadResponse.class);
+    response.setAccepted(true);
     return response;
   }
 }

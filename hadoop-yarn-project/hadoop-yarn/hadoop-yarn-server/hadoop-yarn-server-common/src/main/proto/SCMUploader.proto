@@ -15,14 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.api;
 
-import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.yarn.proto.NMCacheUploaderSCMProtocol.NMCacheUploaderSCMProtocolService;
+option java_package = "org.apache.hadoop.yarn.proto";
+option java_outer_classname = "SCMUploaderProtocol";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
-@ProtocolInfo(protocolName = "org.apache.hadoop.yarn.server.api.NMCacheUploaderSCMProtocolPB",
-    protocolVersion = 1)
-public interface NMCacheUploaderSCMProtocolPB extends
-    NMCacheUploaderSCMProtocolService.BlockingInterface {
+import "yarn_server_common_service_protos.proto";
 
+service SCMUploaderProtocolService {
+  rpc notify(SCMUploaderNotifyRequestProto) returns (SCMUploaderNotifyResponseProto);
+  rpc canUpload(SCMUploaderCanUploadRequestProto) returns (SCMUploaderCanUploadResponseProto);
 }

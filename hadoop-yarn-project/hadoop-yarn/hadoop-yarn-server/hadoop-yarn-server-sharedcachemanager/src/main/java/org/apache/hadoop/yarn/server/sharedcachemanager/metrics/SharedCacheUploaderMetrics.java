@@ -30,29 +30,29 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 /**
- * This class is for maintaining  NM uploader requests metrics
+ * This class is for maintaining shared cache uploader requests metrics
  * and publishing them through the metrics interfaces.
  */
 @Private
 @Evolving
-@Metrics(about="NM cache upload metrics", context="yarn")
-public class NMCacheUploaderSCMProtocolMetrics {
+@Metrics(about="shared cache upload metrics", context="yarn")
+public class SharedCacheUploaderMetrics {
 
   static final Log LOG =
-      LogFactory.getLog(NMCacheUploaderSCMProtocolMetrics.class);
+      LogFactory.getLog(SharedCacheUploaderMetrics.class);
   final MetricsRegistry registry;
 
-  NMCacheUploaderSCMProtocolMetrics() {
-    registry = new MetricsRegistry("NMUploadRequests");
+  SharedCacheUploaderMetrics() {
+    registry = new MetricsRegistry("SharedCacheUploaderRequests");
     LOG.debug("Initialized "+ registry);
   }
 
   enum Singleton {
     INSTANCE;
 
-    NMCacheUploaderSCMProtocolMetrics impl;
+    SharedCacheUploaderMetrics impl;
 
-    synchronized NMCacheUploaderSCMProtocolMetrics init(Configuration conf) {
+    synchronized SharedCacheUploaderMetrics init(Configuration conf) {
       if (impl == null) {
         impl = create();
       }
@@ -60,26 +60,26 @@ public class NMCacheUploaderSCMProtocolMetrics {
     }
   }
 
-  public static NMCacheUploaderSCMProtocolMetrics
+  public static SharedCacheUploaderMetrics
       initSingleton(Configuration conf) {
     return Singleton.INSTANCE.init(conf);
   }
 
-  public static NMCacheUploaderSCMProtocolMetrics getInstance() {
-    NMCacheUploaderSCMProtocolMetrics topMetrics = Singleton.INSTANCE.impl;
+  public static SharedCacheUploaderMetrics getInstance() {
+    SharedCacheUploaderMetrics topMetrics = Singleton.INSTANCE.impl;
     if (topMetrics == null)
       throw new IllegalStateException(
-          "The NMCacheUploaderSCMProtocolMetrics singleton instance is not"
+          "The SharedCacheUploaderMetrics singleton instance is not"
           + "initialized. Have you called init first?");
     return topMetrics;
   }
 
-  static NMCacheUploaderSCMProtocolMetrics create() {
+  static SharedCacheUploaderMetrics create() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
 
-    NMCacheUploaderSCMProtocolMetrics metrics =
-        new NMCacheUploaderSCMProtocolMetrics();
-    ms.register("NMUploaderRequests", null, metrics);
+    SharedCacheUploaderMetrics metrics =
+        new SharedCacheUploaderMetrics();
+    ms.register("SharedCacheUploaderRequests", null, metrics);
     return metrics;
   }
 

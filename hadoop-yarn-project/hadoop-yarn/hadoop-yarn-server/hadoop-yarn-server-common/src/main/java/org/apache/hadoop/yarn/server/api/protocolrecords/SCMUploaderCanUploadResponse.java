@@ -24,27 +24,28 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 /**
  * <p>
  * The response from the SharedCacheManager to the NodeManager that indicates
- * whether the NodeManager needs to delete the cached resource it was sending
- * the notification for.
+ * whether the NodeManager can upload the resource to the shared cache. If it is
+ * not accepted by SCM, the NodeManager should not upload it to the shared
+ * cache.
  * </p>
  */
 @Private
 @Unstable
-public abstract class NotifySCMResponse {
+public abstract class SCMUploaderCanUploadResponse {
 
   /**
-   * Get whether or not the shared cache manager has accepted the notified
-   * resource (i.e. the uploaded file should remain in the cache).
+   * Get whether or not the node manager can upload the resource to the shared
+   * cache.
    *
-   * @return boolean True if the resource has been accepted, false otherwise.
+   * @return boolean True if the resource can be uploaded, false otherwise.
    */
   public abstract boolean getAccepted();
 
   /**
-   * Set whether or not the shared cache manager has accepted the notified
-   * resource (i.e. the uploaded file should remain in the cache).
+   * Set whether or not the node manager can upload the resource to the shared
+   * cache.
    *
-   * @param b True if the resource has been accepted, false otherwise.
+   * @param b True if the resource can be uploaded, false otherwise.
    */
   public abstract void setAccepted(boolean b);
 

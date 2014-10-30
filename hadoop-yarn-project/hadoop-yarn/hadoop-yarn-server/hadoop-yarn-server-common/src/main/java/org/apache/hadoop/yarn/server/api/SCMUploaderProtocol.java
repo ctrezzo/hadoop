@@ -23,8 +23,10 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMRequest;
-import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderCanUploadRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderCanUploadResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyResponse;
 
 /**
  * <p>
@@ -35,7 +37,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NotifySCMResponse;
  */
 @Private
 @Unstable
-public interface NMCacheUploaderSCMProtocol {
+public interface SCMUploaderProtocol {
   /**
    * <p>
    * The method used by the NodeManager's <code>SharedCacheUploadService</code>
@@ -54,7 +56,28 @@ public interface NMCacheUploaderSCMProtocol {
    * @throws YarnException
    * @throws IOException
    */
-  public NotifySCMResponse notify(NotifySCMRequest request)
+  public SCMUploaderNotifyResponse
+      notify(SCMUploaderNotifyRequest request)
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The method used by the NodeManager's <code>SharedCacheUploadService</code>
+   * to request whether a resource can be uploaded.
+   * </p>
+   *
+   * <p>
+   * The <code>SharedCacheManager</code> responds with whether or not the
+   * NodeManager can upload the file.
+   * </p>
+   *
+   * @param request whether the resource can be uploaded to the shared cache
+   * @return response indicating if resource can be uploaded to the shared cache
+   * @throws YarnException
+   * @throws IOException
+   */
+  public SCMUploaderCanUploadResponse
+      canUpload(SCMUploaderCanUploadRequest request)
       throws YarnException, IOException;
 
 }
