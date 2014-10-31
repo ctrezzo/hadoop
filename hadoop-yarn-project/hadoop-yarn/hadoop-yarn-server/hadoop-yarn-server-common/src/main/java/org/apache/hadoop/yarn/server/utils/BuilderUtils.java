@@ -94,7 +94,8 @@ public class BuilderUtils {
   }
 
   public static LocalResource newLocalResource(URL url, LocalResourceType type,
-      LocalResourceVisibility visibility, long size, long timestamp) {
+      LocalResourceVisibility visibility, long size, long timestamp,
+      boolean shouldBeUploadedToSharedCache) {
     LocalResource resource =
       recordFactory.newRecordInstance(LocalResource.class);
     resource.setResource(url);
@@ -102,14 +103,15 @@ public class BuilderUtils {
     resource.setVisibility(visibility);
     resource.setSize(size);
     resource.setTimestamp(timestamp);
+    resource.setShouldBeUploadedToSharedCache(shouldBeUploadedToSharedCache);
     return resource;
   }
 
   public static LocalResource newLocalResource(URI uri,
       LocalResourceType type, LocalResourceVisibility visibility, long size,
-      long timestamp) {
+      long timestamp, boolean shouldBeUploadedToSharedCache) {
     return newLocalResource(ConverterUtils.getYarnUrlFromURI(uri), type,
-        visibility, size, timestamp);
+        visibility, size, timestamp, shouldBeUploadedToSharedCache);
   }
 
   public static ApplicationId newApplicationId(RecordFactory recordFactory,
