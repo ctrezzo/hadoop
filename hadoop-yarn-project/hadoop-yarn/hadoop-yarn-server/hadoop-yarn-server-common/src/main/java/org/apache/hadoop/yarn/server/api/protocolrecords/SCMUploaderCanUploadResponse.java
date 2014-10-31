@@ -39,7 +39,7 @@ public abstract class SCMUploaderCanUploadResponse {
    *
    * @return boolean True if the resource can be uploaded, false otherwise.
    */
-  public abstract boolean getAccepted();
+  public abstract boolean getUploadable();
 
   /**
    * Set whether or not the node manager can upload the resource to the shared
@@ -47,6 +47,6 @@ public abstract class SCMUploaderCanUploadResponse {
    *
    * @param b True if the resource can be uploaded, false otherwise.
    */
-  public abstract void setAccepted(boolean b);
+  public abstract void setUploadable(boolean b);
 
 }

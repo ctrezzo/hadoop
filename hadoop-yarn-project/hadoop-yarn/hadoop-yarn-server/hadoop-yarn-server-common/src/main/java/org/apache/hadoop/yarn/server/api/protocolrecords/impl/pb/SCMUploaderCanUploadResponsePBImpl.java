@@ -47,16 +47,16 @@ public class SCMUploaderCanUploadResponsePBImpl
   }
 
   @Override
-  public boolean getAccepted() {
+  public boolean getUploadable() {
     SCMUploaderCanUploadResponseProtoOrBuilder p = viaProto ? proto : builder;
     // Default to true, when in doubt allow the upload
-    return (p.hasAccepted()) ? p.getAccepted() : true;
+    return (p.hasUploadable()) ? p.getUploadable() : true;
   }
 
   @Override
-  public void setAccepted(boolean b) {
+  public void setUploadable(boolean b) {
     maybeInitBuilder();
-    builder.setAccepted(b);
+    builder.setUploadable(b);
   }
 
   private void mergeLocalToProto() {

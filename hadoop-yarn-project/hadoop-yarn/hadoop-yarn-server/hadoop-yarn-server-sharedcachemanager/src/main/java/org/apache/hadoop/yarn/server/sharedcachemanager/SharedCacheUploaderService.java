@@ -81,7 +81,7 @@ public class SharedCacheUploaderService extends AbstractService
             conf.getInt(YarnConfiguration.SCM_UPLOADER_SERVER_THREAD_COUNT,
                 YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_THREAD_COUNT));
 
-    // TODO: Enable service authorization
+    // TODO (YARN-2774): Enable service authorization
 
     this.server.start();
     bindAddress =
@@ -107,7 +107,7 @@ public class SharedCacheUploaderService extends AbstractService
     SCMUploaderNotifyResponse response =
         recordFactory.newRecordInstance(SCMUploaderNotifyResponse.class);
 
-    // TODO proper security/authorization needs to be implemented (YARN-2774)
+    // TODO (YARN-2774): proper security/authorization needs to be implemented
 
     String filename =
         store.addResource(request.getResourceKey(), request.getFileName());
@@ -128,12 +128,13 @@ public class SharedCacheUploaderService extends AbstractService
   @Override
   public SCMUploaderCanUploadResponse canUpload(
       SCMUploaderCanUploadRequest request) throws YarnException, IOException {
-    // TODO we may want to have a more flexible policy of instructing the node
-    // manager to upload only if it meets a certain criteria (YARN-2781)
+    // TODO (YARN-2781): we may want to have a more flexible policy of
+    // instructing the node manager to upload only if it meets a certain
+    // criteria
     // until then we return true for now
     SCMUploaderCanUploadResponse response =
         recordFactory.newRecordInstance(SCMUploaderCanUploadResponse.class);
-    response.setAccepted(true);
+    response.setUploadable(true);
     return response;
   }
 }
