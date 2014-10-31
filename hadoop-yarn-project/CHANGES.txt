@@ -42,6 +42,9 @@ Release 2.7.0 - UNRELEASED
     YARN-2183. [YARN-1492] Cleaner service for cache manager.
     (Chris Trezzo and Sangjin Lee via kasha)
 
+    YARN-2186. [YARN-1492] Node Manager uploader service for cache manager. 
+    (Chris Trezzo and Sangjin Lee via kasha)
+
   IMPROVEMENTS
 
     YARN-1979. TestDirectoryCollection fails when the umask is unusual.
@@ -416,6 +419,15 @@ Release 2.6.0 - UNRELEASED
     YARN-2760. Remove 'experimental' from FairScheduler docs. (Harsh J via kasha)
 
     YARN-2503. Added node lablels in web UI. (Wangda Tan via jianhe)
+
+    YARN-2779. Fixed ResourceManager to not require delegation tokens for 
+    communicating with Timeline Service. (Zhijie Shen via vinodkv)
+
+    YARN-2778. Moved node-lables' reports to the yarn nodes CLI from the admin
+    CLI. (Wangda Tan via vinodkv)
+
+    YARN-2770. Added functionality to renew/cancel TimeLineDelegationToken.
+    (Zhijie Shen via jianhe)
 
   OPTIMIZATIONS
 
@@ -806,6 +818,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2755. NM fails to clean up usercache_DEL_<timestamp> dirs after
     YARN-661 (Siqi Li via jlowe)
+
+    YARN-2698. Moved some node label APIs to be correctly placed in client
+    protocol. (Wangda Tan via vinodkv)
 
 Release 2.5.1 - 2014-09-05
 

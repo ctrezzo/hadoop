@@ -322,6 +322,12 @@ Release 2.7.0 - UNRELEASED
     HDFS-3342. SocketTimeoutException in BlockSender.sendChunks could
     have a better error message. (Yongjun Zhang via wang)
 
+    HDFS-7035. Make adding a new data directory to the DataNode an atomic
+    operation and improve error handling (Lei Xu via Colin P. McCabe)
+    
+    HDFS-6917. Add an hdfs debug command to validate blocks, call recoverlease,
+    etc. (cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -371,6 +377,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7263. Snapshot read can reveal future bytes for appended files.
     (Tao Luo via shv)
+
+    HDFS-7315. DFSTestUtil.readFileBuffer opens extra FSDataInputStream.
+    (Plamen Jeliazkov via wheat9)
 
 Release 2.6.0 - UNRELEASED
 
@@ -668,6 +677,12 @@ Release 2.6.0 - UNRELEASED
 
     HDFS-7230. Add rolling downgrade documentation. (szetszwo via jing9)
 
+    HDFS-6385. Show when block deletion will start after NameNode startup in
+    WebUI. (cnauroth)
+
+    HDFS-7313. Support optional configuration of AES cipher suite on
+    DataTransferProtocol. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -684,6 +699,9 @@ Release 2.6.0 - UNRELEASED
     HDFS-6606. Optimize HDFS Encrypted Transport performance. (yliu)
 
   BUG FIXES
+
+    HDFS-7309. XMLUtils.mangleXmlString doesn't seem to handle less than sign
+    (Colin Patrick McCabe via raviprak)
 
     HDFS-6823. dfs.web.authentication.kerberos.principal shows up in logs for 
     insecure HDFS (Allen Wittenauer via raviprak)
