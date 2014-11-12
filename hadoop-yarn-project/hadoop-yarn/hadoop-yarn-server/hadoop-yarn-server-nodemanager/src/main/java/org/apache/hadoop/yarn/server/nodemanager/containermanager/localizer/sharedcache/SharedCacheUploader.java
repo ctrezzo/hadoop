@@ -148,8 +148,6 @@ class SharedCacheUploader implements Callable<Boolean> {
       }
 
       // set the permission so that it is readable but not writable
-      // TODO should I create the file with the right permission so I save the
-      // permission call?
       fs.setPermission(tempPath, FILE_PERMISSION);
       // rename it to the final filename
       Path finalPath = new Path(directoryPath, actualPath.getName());

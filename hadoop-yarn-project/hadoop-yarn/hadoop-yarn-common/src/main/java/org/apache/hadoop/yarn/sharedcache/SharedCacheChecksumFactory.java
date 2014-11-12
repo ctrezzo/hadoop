@@ -24,9 +24,11 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+@SuppressWarnings("unchecked")
 @Public
 @Evolving
 /**
@@ -34,8 +36,24 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
  * algorithm implementation
  */
 public class SharedCacheChecksumFactory {
-  private static final ConcurrentMap<String,SharedCacheChecksum> instances =
-      new ConcurrentHashMap<String,SharedCacheChecksum>();
+  private static final
+      ConcurrentMap<Class<? extends SharedCacheChecksum>,SharedCacheChecksum>
+      instances =
+          new ConcurrentHashMap<Class<? extends SharedCacheChecksum>,
+          SharedCacheChecksum>();
+
+  private static final Class<? extends SharedCacheChecksum> defaultAlgorithm;
+
+  static {
+    try {
+      defaultAlgorithm = (Class<? extends SharedCacheChecksum>)
+          Class.forName(
+              YarnConfiguration.DEFAULT_SHARED_CACHE_CHECKSUM_ALGO_IMPL);
+    } catch (Exception e) {
+      // cannot happen
+      throw new ExceptionInInitializerError(e);
+    }
+  }
 
   /**
    * Get a new <code>SharedCacheChecksum</code> object based on the configurable
@@ -45,15 +63,14 @@ public class SharedCacheChecksumFactory {
    * @return <code>SharedCacheChecksum</code> object
    */
   public static SharedCacheChecksum getChecksum(Configuration conf) {
-    String className =
-        conf.get(YarnConfiguration.SHARED_CACHE_CHECKSUM_ALGO_IMPL,
-            YarnConfiguration.DEFAULT_SHARED_CACHE_CHECKSUM_ALGO_IMPL);
-    SharedCacheChecksum checksum = instances.get(className);
+    Class<? extends SharedCacheChecksum> clazz =
+        conf.getClass(YarnConfiguration.SHARED_CACHE_CHECKSUM_ALGO_IMPL,
+        defaultAlgorithm, SharedCacheChecksum.class);
+    SharedCacheChecksum checksum = instances.get(clazz);
     if (checksum == null) {
       try {
-        Class<?> clazz = Class.forName(className);
-        checksum = (SharedCacheChecksum) clazz.newInstance();
-        SharedCacheChecksum old = instances.putIfAbsent(className, checksum);
+        checksum = ReflectionUtils.newInstance(clazz, conf);
+        SharedCacheChecksum old = instances.putIfAbsent(clazz, checksum);
         if (old != null) {
           checksum = old;
         }

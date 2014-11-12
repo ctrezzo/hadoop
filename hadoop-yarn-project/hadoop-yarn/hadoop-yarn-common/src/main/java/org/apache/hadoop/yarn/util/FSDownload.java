@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -133,6 +134,7 @@ public class FSDownload implements Callable<Path> {
    * @return true if the path in the current path is visible to all, false
    * otherwise
    */
+  @Private
   public static boolean isPublic(FileSystem fs, Path current, FileStatus sStat,
       LoadingCache<Path,Future<FileStatus>> statCache) throws IOException {
     current = fs.makeQualified(current);

@@ -644,7 +644,7 @@ public class ContainerImpl implements Container {
                 container.pendingResources.put(req, links);
               }
               links.add(rsrc.getKey());
-              storeSharedCacheUploadPolicies(container, req, rsrc.getValue()
+              storeSharedCacheUploadPolicy(container, req, rsrc.getValue()
                   .getShouldBeUploadedToSharedCache());
               switch (rsrc.getValue().getVisibility()) {
               case PUBLIC:
@@ -694,17 +694,19 @@ public class ContainerImpl implements Container {
     }
   }
 
-  // Store the resource's shared cache upload policies
-  // Given LocalResourceRequest can be shared across containers in
-  // LocalResourcesTrackerImpl, we preserve the upload policies here.
-  // In addition, it is possible for the application to create several
-  // "identical" LocalResources as part of
-  // ContainerLaunchContext.setLocalResources with different symlinks.
-  // There is a corner case where these "identical" local resources have
-  // different upload policies. For that scenario, upload policy will be set to
-  // true as long as there is at least one LocalResource entry with
-  // upload policy set to true.
-  private static void storeSharedCacheUploadPolicies(ContainerImpl container,
+  /**
+   * Store the resource's shared cache upload policies
+   * Given LocalResourceRequest can be shared across containers in
+   * LocalResourcesTrackerImpl, we preserve the upload policies here.
+   * In addition, it is possible for the application to create several
+   * "identical" LocalResources as part of
+   * ContainerLaunchContext.setLocalResources with different symlinks.
+   * There is a corner case where these "identical" local resources have
+   * different upload policies. For that scenario, upload policy will be set to
+   * true as long as there is at least one LocalResource entry with
+   * upload policy set to true.
+   */
+  private static void storeSharedCacheUploadPolicy(ContainerImpl container,
       LocalResourceRequest resourceRequest, Boolean uploadPolicy) {
     Boolean storedUploadPolicy =
         container.resourcesUploadPolicies.get(resourceRequest);

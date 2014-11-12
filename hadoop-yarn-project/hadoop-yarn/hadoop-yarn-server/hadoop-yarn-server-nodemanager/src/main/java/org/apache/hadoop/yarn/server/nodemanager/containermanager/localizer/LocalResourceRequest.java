@@ -20,8 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
 import java.net.URISyntaxException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -31,8 +29,6 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class LocalResourceRequest
     extends LocalResource implements Comparable<LocalResourceRequest> {
-
-  private static final Log LOG = LogFactory.getLog(LocalResourceRequest.class);
 
   private final Path loc;
   private final long timestamp;
