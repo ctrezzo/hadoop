@@ -144,9 +144,7 @@ public class CommonNodeLabelsManager extends AbstractService {
 
     @Override
     public void handle(NodeLabelsStoreEvent event) {
-      if (isInState(STATE.STARTED)) {
-        handleStoreEvent(event);
-      }
+      handleStoreEvent(event);
     }
   }
   
@@ -256,7 +254,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     if (null == labels || labels.isEmpty()) {
       return;
     }
-
+    Set<String> newLabels = new HashSet<String>();
     labels = normalizeLabels(labels);
 
     // do a check before actual adding them, will throw exception if any of them
@@ -266,11 +264,15 @@ public class CommonNodeLabelsManager extends AbstractService {
     }
 
     for (String label : labels) {
-      this.labelCollections.put(label, new Label());
+      // shouldn't overwrite it to avoid changing the Label.resource
+      if (this.labelCollections.get(label) == null) {
+        this.labelCollections.put(label, new Label());
+        newLabels.add(label);
+      }
     }
-    if (null != dispatcher) {
+    if (null != dispatcher && !newLabels.isEmpty()) {
       dispatcher.getEventHandler().handle(
-          new StoreNewClusterNodeLabels(labels));
+          new StoreNewClusterNodeLabels(newLabels));
     }
 
     LOG.info("Add labels: [" + StringUtils.join(labels.iterator(), ",") + "]");
@@ -342,6 +344,7 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void addLabelsToNode(Map<NodeId, Set<String>> addedLabelsToNode)
       throws IOException {
+    addedLabelsToNode = normalizeNodeIdToLabels(addedLabelsToNode);
     checkAddLabelsToNode(addedLabelsToNode);
     internalAddLabelsToNode(addedLabelsToNode);
   }
@@ -407,6 +410,8 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void removeFromClusterNodeLabels(Collection<String> labelsToRemove)
       throws IOException {
+    labelsToRemove = normalizeLabels(labelsToRemove);
+    
     checkRemoveFromClusterNodeLabels(labelsToRemove);
 
     internalRemoveFromClusterNodeLabels(labelsToRemove);
@@ -453,12 +458,15 @@ public class CommonNodeLabelsManager extends AbstractService {
         LOG.error(msg);
         throw new IOException(msg);
       }
-      
-      if (labels == null || labels.isEmpty()) {
+
+      // the labels will never be null
+      if (labels.isEmpty()) {
         continue;
       }
 
-      if (!originalLabels.containsAll(labels)) {
+      // originalLabels may be null,
+      // because when a Node is created, Node.labels can be null.
+      if (originalLabels == null || !originalLabels.containsAll(labels)) {
         String msg =
             "Try to remove labels = [" + StringUtils.join(labels, ",")
                 + "], but not all labels contained by NM=" + nodeId;
@@ -513,6 +521,8 @@ public class CommonNodeLabelsManager extends AbstractService {
   public void
       removeLabelsFromNode(Map<NodeId, Set<String>> removeLabelsFromNode)
           throws IOException {
+    removeLabelsFromNode = normalizeNodeIdToLabels(removeLabelsFromNode);
+    
     checkRemoveLabelsFromNode(removeLabelsFromNode);
 
     internalRemoveLabelsFromNode(removeLabelsFromNode);
@@ -585,6 +595,8 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void replaceLabelsOnNode(Map<NodeId, Set<String>> replaceLabelsToNode)
       throws IOException {
+    replaceLabelsToNode = normalizeNodeIdToLabels(replaceLabelsToNode);
+    
     checkReplaceLabelsOnNode(replaceLabelsToNode);
 
     internalReplaceLabelsOnNode(replaceLabelsToNode);
@@ -660,7 +672,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     return NO_LABEL;
   }
 
-  private Set<String> normalizeLabels(Set<String> labels) {
+  private Set<String> normalizeLabels(Collection<String> labels) {
     Set<String> newLabels = new HashSet<String>();
     for (String label : labels) {
       newLabels.add(normalizeLabel(label));
@@ -726,5 +738,16 @@ public class CommonNodeLabelsManager extends AbstractService {
       host = new Host();
       nodeCollections.put(hostName, host);
     }
+  }
+  
+  protected Map<NodeId, Set<String>> normalizeNodeIdToLabels(
+      Map<NodeId, Set<String>> nodeIdToLabels) {
+    Map<NodeId, Set<String>> newMap = new HashMap<NodeId, Set<String>>();
+    for (Entry<NodeId, Set<String>> entry : nodeIdToLabels.entrySet()) {
+      NodeId id = entry.getKey();
+      Set<String> labels = entry.getValue();
+      newMap.put(id, normalizeLabels(labels)); 
+    }
+    return newMap;
   }
 }

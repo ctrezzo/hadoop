@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -36,6 +38,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataInputByteBuffer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -710,7 +714,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   @Override
-  public void recover(RMState state) throws Exception{
+  public void recover(RMState state) {
     ApplicationState appState = state.getApplicationState().get(getApplicationId());
     this.recoveredFinalState = appState.getState();
     LOG.info("Recovering app: " + getApplicationId() + " with " + 
@@ -825,11 +829,27 @@ public class RMAppImpl implements RMApp, Recoverable {
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
 
+      RMAppRecoverEvent recoverEvent = (RMAppRecoverEvent) event;
+      app.recover(recoverEvent.getRMState());
       // The app has completed.
       if (app.recoveredFinalState != null) {
         app.recoverAppAttempts();
         new FinalTransition(app.recoveredFinalState).transition(app, event);
         return app.recoveredFinalState;
+      }
+
+      if (UserGroupInformation.isSecurityEnabled()) {
+        // synchronously renew delegation token on recovery.
+        try {
+          app.rmContext.getDelegationTokenRenewer().addApplicationSync(
+            app.getApplicationId(), app.parseCredentials(),
+            app.submissionContext.getCancelTokensWhenComplete(), app.getUser());
+        } catch (Exception e) {
+          String msg = "Failed to renew token for " + app.applicationId
+                  + " on recovery : " + e.getMessage();
+          app.diagnostics.append(msg);
+          LOG.error(msg, e);
+        }
       }
 
       // No existent attempts means the attempt associated with this app was not
@@ -1295,5 +1315,17 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public ReservationId getReservationId() {
     return submissionContext.getReservationID();
+  }
+
+  protected Credentials parseCredentials() throws IOException {
+    Credentials credentials = new Credentials();
+    DataInputByteBuffer dibb = new DataInputByteBuffer();
+    ByteBuffer tokens = submissionContext.getAMContainerSpec().getTokens();
+    if (tokens != null) {
+      dibb.reset(tokens);
+      credentials.readTokenStorageStream(dibb);
+      tokens.rewind();
+    }
+    return credentials;
   }
 }

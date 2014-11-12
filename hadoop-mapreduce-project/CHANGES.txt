@@ -236,7 +236,7 @@ Release 2.7.0 - UNRELEASED
 
   BUG FIXES
 
-Release 2.6.0 - UNRELEASED
+Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
 
@@ -282,6 +282,9 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6018. Added an MR specific config to enable emitting job history
     data to the timeline server. (Robert Kanter via zjshen)
+
+    MAPREDUCE-6052. Supported overriding the default container-log4j.properties
+    file per job. (Junping Du via zjshen)
 
   OPTIMIZATIONS
 
@@ -452,6 +455,28 @@ Release 2.6.0 - UNRELEASED
 
     MAPREDUCE-6022. map_input_file is missing from streaming job environment.
     (jlowe via kihwal)
+
+    MAPREDUCE-6048. Fixed TestJavaSerialization failure. (Varun Vasudev via
+    jianhe)
+
+    MAPREDUCE-5960. JobSubmitter's check whether job.jar is local is incorrect
+    with no authority in job jar path. (Gera Shegalov via jlowe)
+
+    MAPREDUCE-5958. Wrong reduce task progress if map output is compressed
+    (Emilio Coppa and jlowe via kihwal)
+
+Release 2.5.2 - 2014-11-10
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 
 Release 2.5.1 - 2014-09-05
 

@@ -15,24 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
-/** 
- * This interface is used by the block manager to expose a
- * few characteristics of a collection of Block/BlockUnderConstruction.
- */
-public interface MutableBlockCollection extends BlockCollection {
-  /**
-   * Set the block at the given index.
-   */
-  public void setBlock(int index, BlockInfo blk);
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-  /**
-   * Convert the last block of the collection to an under-construction block
-   * and set the locations.
-   */
-  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
-      DatanodeStorageInfo[] storages) throws IOException;
+@Private
+public class QueueNotFoundException extends YarnRuntimeException {
+
+  private static final long serialVersionUID = 187239430L;
+
+  public QueueNotFoundException(String message) {
+    super(message);
+  }
 }

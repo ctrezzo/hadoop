@@ -789,7 +789,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   @Override
-  public void recover(RMState state) throws Exception {
+  public void recover(RMState state) {
     ApplicationState appState =
         state.getApplicationState().get(getAppAttemptId().getApplicationId());
     ApplicationAttemptState attemptState =
@@ -823,7 +823,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   private void recoverAppAttemptCredentials(Credentials appAttemptTokens,
-      RMAppAttemptState state) throws IOException {
+      RMAppAttemptState state) {
     if (appAttemptTokens == null || state == RMAppAttemptState.FAILED
         || state == RMAppAttemptState.FINISHED
         || state == RMAppAttemptState.KILLED) {
@@ -833,8 +833,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     if (UserGroupInformation.isSecurityEnabled()) {
       byte[] clientTokenMasterKeyBytes = appAttemptTokens.getSecretKey(
           RMStateStore.AM_CLIENT_TOKEN_MASTER_KEY_NAME);
-      clientTokenMasterKey = rmContext.getClientToAMTokenSecretManager()
-          .registerMasterKey(applicationAttemptId, clientTokenMasterKeyBytes);
+      if (clientTokenMasterKeyBytes != null) {
+        clientTokenMasterKey = rmContext.getClientToAMTokenSecretManager()
+            .registerMasterKey(applicationAttemptId, clientTokenMasterKeyBytes);
+      }
     }
 
     this.amrmToken =
@@ -1019,6 +1021,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         // state but application is not in final state.
         if (rmApp.getCurrentAppAttempt() == appAttempt
             && !RMAppImpl.isAppInFinalState(rmApp)) {
+          // Add the previous finished attempt to scheduler synchronously so
+          // that scheduler knows the previous attempt.
+          appAttempt.scheduler.handle(new AppAttemptAddedSchedulerEvent(
+            appAttempt.getAppAttemptId(), false, true));
           (new BaseFinalTransition(appAttempt.recoveredFinalState)).transition(
               appAttempt, event);
         }

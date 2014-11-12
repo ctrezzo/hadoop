@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService;
+import org.apache.hadoop.yarn.server.nodemanager.WindowsSecureContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
@@ -461,9 +462,8 @@ public class ContainerLaunch implements Callable<Integer> {
     final int sleepInterval = 100;
 
     // loop waiting for pid file to show up 
-    // until either the completed flag is set which means something bad 
-    // happened or our timer expires in which case we admit defeat
-    while (!completed.get()) {
+    // until our timer expires in which case we admit defeat
+    while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
       if (processId != null) {
         LOG.debug("Got pid " + processId + " for container "
@@ -768,8 +768,17 @@ public class ContainerLaunch implements Callable<Integer> {
           System.getenv());
         mergedEnv.putAll(environment);
         
+        // this is hacky and temporary - it's to preserve the windows secure
+        // behavior but enable non-secure windows to properly build the class
+        // path for access to job.jar/lib/xyz and friends (see YARN-2803)
+        Path jarDir;
+        if (exec instanceof WindowsSecureContainerExecutor) {
+          jarDir = nmPrivateClasspathJarDir;
+        } else {
+          jarDir = pwd; 
+        }
         String[] jarCp = FileUtil.createJarWithClassPath(
-          newClassPath.toString(), nmPrivateClasspathJarDir, pwd, mergedEnv);
+          newClassPath.toString(), jarDir, pwd, mergedEnv);
         // In a secure cluster the classpath jar must be localized to grant access
         Path localizedClassPathJar = exec.localizeClasspathJar(
             new Path(jarCp[0]), pwd, container.getUser());

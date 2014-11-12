@@ -23,9 +23,7 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -195,7 +193,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected void serviceInit(Configuration conf) throws Exception {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
-
+    
     this.configurationProvider =
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
@@ -228,6 +226,22 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     validateConfigs(this.conf);
+    
+    // Set HA configuration should be done before login
+    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
+    if (this.rmContext.isHAEnabled()) {
+      HAUtil.verifyAndSetConfiguration(this.conf);
+    }
+    
+    // Set UGI and do login
+    // If security is enabled, use login user
+    // If security is not enabled, use current user
+    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
+    try {
+      doSecureLogin();
+    } catch(IOException ie) {
+      throw new YarnRuntimeException("Failed to login", ie);
+    }
 
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
@@ -237,18 +251,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     adminService = createAdminService();
     addService(adminService);
     rmContext.setRMAdminService(adminService);
-
-    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
-    if (this.rmContext.isHAEnabled()) {
-      HAUtil.verifyAndSetConfiguration(this.conf);
-    }
+    
     createAndInitActiveServices();
 
     webAppAddress = WebAppUtils.getWebAppBindURL(this.conf,
                       YarnConfiguration.RM_BIND_HOST,
                       WebAppUtils.getRMWebAppURLWithoutScheme(this.conf));
-
-    this.rmLoginUGI = UserGroupInformation.getCurrentUser();
 
     super.serviceInit(this.conf);
   }
@@ -261,6 +269,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @VisibleForTesting
   protected void setRMStateStore(RMStateStore rmStore) {
     rmStore.setRMDispatcher(rmDispatcher);
+    rmStore.setResourceManager(this);
     rmContext.setStateStore(rmStore);
   }
 
@@ -389,11 +398,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private EventHandler<SchedulerEvent> schedulerDispatcher;
     private ApplicationMasterLauncher applicationMasterLauncher;
     private ContainerAllocationExpirer containerAllocationExpirer;
-
+    private ResourceManager rm;
     private boolean recoveryEnabled;
 
-    RMActiveServices() {
+    RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
+      this.rm = rm;
     }
 
     @Override
@@ -441,6 +451,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       try {
         rmStore.init(conf);
         rmStore.setRMDispatcher(rmDispatcher);
+        rmStore.setResourceManager(rm);
       } catch (Exception e) {
         // the Exception from stateStore.init() needs to be handled for
         // HA and we need to give up master status if we got fenced
@@ -721,36 +732,28 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Private
   public static class RMFatalEventDispatcher
       implements EventHandler<RMFatalEvent> {
-    private final RMContext rmContext;
-    private final ResourceManager rm;
-
-    public RMFatalEventDispatcher(
-        RMContext rmContext, ResourceManager resourceManager) {
-      this.rmContext = rmContext;
-      this.rm = resourceManager;
-    }
 
     @Override
     public void handle(RMFatalEvent event) {
       LOG.fatal("Received a " + RMFatalEvent.class.getName() + " of type " +
           event.getType().name() + ". Cause:\n" + event.getCause());
 
-      if (event.getType() == RMFatalEventType.STATE_STORE_FENCED) {
-        LOG.info("RMStateStore has been fenced");
-        if (rmContext.isHAEnabled()) {
-          try {
-            // Transition to standby and reinit active services
-            LOG.info("Transitioning RM to Standby mode");
-            rm.transitionToStandby(true);
-            rm.adminService.resetLeaderElection();
-            return;
-          } catch (Exception e) {
-            LOG.fatal("Failed to transition RM to Standby mode.");
-          }
-        }
-      }
-
       ExitUtil.terminate(1, event.getCause());
+    }
+  }
+
+  public void handleTransitionToStandBy() {
+    if (rmContext.isHAEnabled()) {
+      try {
+        // Transition to standby and reinit active services
+        LOG.info("Transitioning RM to Standby mode");
+        transitionToStandby(true);
+        adminService.resetLeaderElection();
+        return;
+      } catch (Exception e) {
+        LOG.fatal("Failed to transition RM to Standby mode.");
+        ExitUtil.terminate(1, e);
+      }
     }
   }
 
@@ -982,7 +985,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * @throws Exception
    */
   protected void createAndInitActiveServices() throws Exception {
-    activeServices = new RMActiveServices();
+    activeServices = new RMActiveServices(this);
     activeServices.init(conf);
   }
 
@@ -1019,17 +1022,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   synchronized void transitionToActive() throws Exception {
-    if (rmContext.getHAServiceState() ==
-        HAServiceProtocol.HAServiceState.ACTIVE) {
+    if (rmContext.getHAServiceState() == HAServiceProtocol.HAServiceState.ACTIVE) {
       LOG.info("Already in active state");
       return;
     }
 
     LOG.info("Transitioning to active state");
 
-    // use rmLoginUGI to startActiveServices.
-    // in non-secure model, rmLoginUGI will be current UGI
-    // in secure model, rmLoginUGI will be LoginUser UGI
     this.rmLoginUGI.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
@@ -1071,12 +1070,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   @Override
   protected void serviceStart() throws Exception {
-    try {
-      doSecureLogin();
-    } catch(IOException ie) {
-      throw new YarnRuntimeException("Failed to login", ie);
-    }
-
     if (this.rmContext.isHAEnabled()) {
       transitionToStandby(true);
     } else {
@@ -1084,7 +1077,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     startWepApp();
-    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER,
+        false)) {
       int port = webApp.port();
       WebAppUtils.setRMWebAppPort(conf, port);
     }
@@ -1228,7 +1222,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private Dispatcher setupDispatcher() {
     Dispatcher dispatcher = createDispatcher();
     dispatcher.register(RMFatalEventType.class,
-        new ResourceManager.RMFatalEventDispatcher(this.rmContext, this));
+        new ResourceManager.RMFatalEventDispatcher());
     return dispatcher;
   }
 

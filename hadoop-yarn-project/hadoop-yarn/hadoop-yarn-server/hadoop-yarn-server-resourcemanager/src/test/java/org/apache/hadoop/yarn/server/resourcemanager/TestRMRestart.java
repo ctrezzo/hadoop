@@ -440,7 +440,10 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     nm1.registerNode();
 
     // create app and launch the AM
-    RMApp app0 = rm1.submitApp(200);
+    RMApp app0 =
+        rm1.submitApp(200, "name", "user",
+          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
+          null, "MAPREDUCE", true, true);
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // fail the AM by sending CONTAINER_FINISHED event without registering.
@@ -1960,7 +1963,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
 
   public static NMContainerStatus createNMContainerStatus(
       ApplicationAttemptId appAttemptId, int id, ContainerState containerState) {
-    ContainerId containerId = ContainerId.newInstance(appAttemptId, id);
+    ContainerId containerId = ContainerId.newContainerId(appAttemptId, id);
     NMContainerStatus containerReport =
         NMContainerStatus.newInstance(containerId, containerState,
           Resource.newInstance(1024, 1), "recover container", 0,

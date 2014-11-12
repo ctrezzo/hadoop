@@ -70,7 +70,7 @@ public class TestContainerResourceUsage {
   public void tearDown() {
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 120000)
   public void testUsageWithOneAttemptAndOneContainer() throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
@@ -102,7 +102,12 @@ public class TestContainerResourceUsage {
            .getRMContainer(attempt0.getMasterContainer().getId());
 
     // Allow metrics to accumulate.
-    Thread.sleep(1000);
+    int sleepInterval = 1000;
+    int cumulativeSleepTime = 0;
+    while (rmAppMetrics.getMemorySeconds() <= 0 && cumulativeSleepTime < 5000) {
+      Thread.sleep(sleepInterval);
+      cumulativeSleepTime += sleepInterval;
+    }
 
     rmAppMetrics = app0.getRMAppMetrics();
     Assert.assertTrue(
@@ -127,7 +132,7 @@ public class TestContainerResourceUsage {
     rm.stop();
   }
 
-  @Test (timeout = 60000)
+  @Test (timeout = 120000)
   public void testUsageWithMultipleContainersAndRMRestart() throws Exception {
     // Set max attempts to 1 so that when the first attempt fails, the app
     // won't try to start a new one.
@@ -180,8 +185,14 @@ public class TestContainerResourceUsage {
             .getSchedulerAppInfo(attempt0.getAppAttemptId())
               .getLiveContainers();
 
-    // Give the metrics time to accumulate.
-    Thread.sleep(1000);
+    // Allow metrics to accumulate.
+    int sleepInterval = 1000;
+    int cumulativeSleepTime = 0;
+    while (app0.getRMAppMetrics().getMemorySeconds() <= 0
+        && cumulativeSleepTime < 5000) {
+      Thread.sleep(sleepInterval);
+      cumulativeSleepTime += sleepInterval;
+    }
 
     // Stop all non-AM containers
     for (Container c : conts) {
@@ -196,7 +207,7 @@ public class TestContainerResourceUsage {
     // usage metrics. This will cause the attempt to fail, and, since the max
     // attempt retries is 1, the app will also fail. This is intentional so
     // that all containers will complete prior to saving.
-    ContainerId cId = ContainerId.newInstance(attempt0.getAppAttemptId(), 1);
+    ContainerId cId = ContainerId.newContainerId(attempt0.getAppAttemptId(), 1);
     nm.nodeHeartbeat(attempt0.getAppAttemptId(),
                  cId.getContainerId(), ContainerState.COMPLETE);
     rm0.waitForState(nm, cId, RMContainerState.COMPLETED);
@@ -278,7 +289,7 @@ public class TestContainerResourceUsage {
 
     // launch the 2nd container.
     ContainerId containerId2 =
-        ContainerId.newInstance(am0.getApplicationAttemptId(), 2);
+        ContainerId.newContainerId(am0.getApplicationAttemptId(), 2);
     nm.nodeHeartbeat(am0.getApplicationAttemptId(),
                       containerId2.getContainerId(), ContainerState.RUNNING);
     rm.waitForState(nm, containerId2, RMContainerState.RUNNING);

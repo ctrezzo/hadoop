@@ -142,7 +142,7 @@ public class BuilderUtils {
 
   public static ContainerId newContainerId(ApplicationAttemptId appAttemptId,
       long containerId) {
-    return ContainerId.newInstance(appAttemptId, containerId);
+    return ContainerId.newContainerId(appAttemptId, containerId);
   }
 
   public static ContainerId newContainerId(int appId, int appAttemptId,
@@ -167,11 +167,18 @@ public class BuilderUtils {
   public static ContainerId newContainerId(RecordFactory recordFactory,
       ApplicationId appId, ApplicationAttemptId appAttemptId,
       int containerId) {
-    return ContainerId.newInstance(appAttemptId, containerId);
+    return ContainerId.newContainerId(appAttemptId, containerId);
   }
 
   public static NodeId newNodeId(String host, int port) {
     return NodeId.newInstance(host, port);
+  }
+  
+  public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,
+      String httpAddress, String rackName, Resource used, Resource capability,
+      int numContainers, String healthReport, long lastHealthReportTime) {
+    return newNodeReport(nodeId, nodeState, httpAddress, rackName, used,
+        capability, numContainers, healthReport, lastHealthReportTime, null);
   }
   
   public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState,

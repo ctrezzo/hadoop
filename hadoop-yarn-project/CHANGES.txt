@@ -62,6 +62,12 @@ Release 2.7.0 - UNRELEASED
     YARN-2712. TestWorkPreservingRMRestart: Augment FS tests with
     queue and headroom checks. (Tsuyoshi Ozawa via kasha)
 
+    YARN-2735. diskUtilizationPercentageCutoff and diskUtilizationSpaceCutoff 
+    are initialized twice in DirectoryCollection. (Zhihai Xu via kasha)
+
+    YARN-570. Time strings are formated in different timezone. 
+    (Akira Ajisaka and Peng Zhang via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -72,7 +78,12 @@ Release 2.7.0 - UNRELEASED
     YARN-2713. "RM Home" link in NM should point to one of the RMs in an 
     HA setup. (kasha)
 
-Release 2.6.0 - UNRELEASED
+    YARN-2841. RMProxy should retry EOFException. (Jian He via xgong)
+
+    YARN-2843. Fixed NodeLabelsManager to trim inputs for hosts and labels so
+    as to make them work correctly. (Wangda Tan via vinodkv)
+
+Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
 
@@ -191,6 +202,15 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2198. Remove the need to run NodeManager as privileged account for
     Windows Secure Container Executor. (Remus Rusanu via jianhe)
+
+    YARN-2647. Added a queue CLI for getting queue information. (Sunil Govind via
+    vinodkv)
+
+    YARN-2632. Document NM Restart feature. (Junping Du and Vinod Kumar
+    Vavilapalli via jlowe)
+
+    YARN-2505. Supported get/add/remove/change labels in RM REST API. (Craig Welch
+    via zjshen)
 
   IMPROVEMENTS
 
@@ -428,6 +448,9 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2770. Added functionality to renew/cancel TimeLineDelegationToken.
     (Zhijie Shen via jianhe)
+
+    YARN-2818. Removed the now unnecessary user entity injection from Timeline
+    service given we now have domains. (Zhijie Shen via vinodkv)
 
   OPTIMIZATIONS
 
@@ -737,6 +760,8 @@ Release 2.6.0 - UNRELEASED
     YARN-2677 registry punycoding of usernames doesn't fix all usernames to be
     DNS-valid (stevel)
 
+    YARN-2768 Improved Yarn Registry service record structure (stevel)
+
     ---
 
     YARN-2598 GHS should show N/A instead of null for the inaccessible information
@@ -821,6 +846,112 @@ Release 2.6.0 - UNRELEASED
 
     YARN-2698. Moved some node label APIs to be correctly placed in client
     protocol. (Wangda Tan via vinodkv)
+
+    YARN-2789. Re-instated the NodeReport.newInstance private unstable API
+    modified in YARN-2698 so that tests in YARN frameworks don't break. (Wangda
+    Tan via vinodkv)
+
+    YARN-2707. Potential null dereference in FSDownload (Gera Shegalov via
+    jlowe)
+
+    YARN-2711. Fixed TestDefaultContainerExecutor#testContainerLaunchError failure on
+    Windows. (Varun Vasudev via zjshen)
+
+    YARN-2790. Fixed a NodeManager bug that was causing log-aggregation to fail
+    beyond HFDS delegation-token expiry even when RM is a proxy-user (YARN-2704).
+    (Jian He via vinodkv)
+
+    YARN-2785. Fixed intermittent TestContainerResourceUsage failure. (Varun Vasudev
+    via zjshen)
+
+    YARN-2730. DefaultContainerExecutor runs only one localizer at a time
+    (Siqi Li via jlowe)
+
+    YARN-2798. Fixed YarnClient to populate the renewer correctly for Timeline
+    delegation tokens. (Zhijie Shen via vinodkv)
+
+    YARN-2788. Fixed backwards compatiblity issues with log-aggregation feature
+    that were caused when adding log-upload-time via YARN-2703. (Xuan Gong via
+    vinodkv)
+
+    YARN-2795. Fixed ResourceManager to not crash loading node-label data from
+    HDFS in secure mode. (Wangda Tan via vinodkv)
+
+    YARN-1922. Fixed NodeManager to kill process-trees correctly in the presence 
+    of races between the launch and the stop-container call and when root
+    processes crash. (Billie Rinaldi via vinodkv)
+
+    YARN-2010. Handle app-recovery failures gracefully. 
+    (Jian He and Karthik Kambatla via kasha)
+
+    YARN-2804. Fixed Timeline service to not fill the logs with JAXB bindings
+    exceptions. (Zhijie Shen via vinodkv)
+
+    YARN-2767. Added a test case to verify that http static user cannot kill or submit
+    apps in the secure mode. (Varun Vasudev via zjshen)
+
+    YARN-2805. Fixed ResourceManager to load HA configs correctly before kerberos
+    login. (Wangda Tan via vinodkv)
+
+    YARN-2579. Fixed a deadlock issue when EmbeddedElectorService and
+    FatalEventDispatcher try to transition RM to StandBy at the same time.
+    (Rohith Sharmaks via jianhe)
+
+    YARN-2813. Fixed NPE from MemoryTimelineStore.getDomains. (Zhijie Shen via xgong)
+
+    YARN-2812. TestApplicationHistoryServer is likely to fail on less powerful machine.
+    (Zhijie Shen via xgong)
+
+    YARN-2744. Fixed CapacityScheduler to validate node-labels correctly against
+    queues. (Wangda Tan via vinodkv)
+
+    YARN-2823. Fixed ResourceManager app-attempt state machine to inform
+    schedulers about previous finished attempts of a running appliation to avoid
+    expectation mismatch w.r.t transferred containers. (Jian He via vinodkv)
+
+    YARN-2810. TestRMProxyUsersConf fails on Windows VMs. (Varun Vasudev via xgong)
+
+    YARN-2824. Fixed Capacity Scheduler to not crash when some node-labels are
+    not mapped to queues by making default capacities per label to be zero.
+    (Wangda Tan via vinodkv)
+
+    YARN-2827. Fixed bugs in "yarn queue" CLI. (Wangda Tan via vinodkv)
+
+    YARN-2803. MR distributed cache not working correctly on Windows after
+    NodeManager privileged account changes. (Craig Welch via cnauroth)
+
+    YARN-2753. Fixed a bunch of bugs in the NodeLabelsManager classes. (Zhihai xu
+    via vinodkv)
+
+    YARN-2825. Container leak on NM (Jian He via jlowe)
+
+    YARN-2819. NPE in ATS Timeline Domains when upgrading from 2.4 to 2.6.
+    (Zhijie Shen via xgong)
+
+    YARN-2826. Fixed user-groups mappings' refresh bug caused by YARN-2826.
+    (Wangda Tan via vinodkv)
+
+    YARN-2607. Fixed issues in TestDistributedShell. (Wangda Tan via vinodkv)
+
+    YARN-2830. Add backwords compatible ContainerId.newInstance constructor.
+    (jeagles via acmurthy) 
+
+    YARN-2834. Fixed ResourceManager to ignore token-renewal failures on recovery
+    consistent with the (somewhat incorrect) behaviour in the non-recovery case.
+    (Jian He via vinodkv)
+
+Release 2.5.2 - 2014-11-10
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 
 Release 2.5.1 - 2014-09-05
 

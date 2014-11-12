@@ -252,6 +252,9 @@ Trunk (Unreleased)
 
     HDFS-7204. balancer doesn't run as a daemon (aw)
 
+    HDFS-7319. Remove dead link to HFTP documentation from index.xml.
+    (Masatake Iwasaki via wheat9)
+
 Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -283,8 +286,6 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7266. HDFS Peercache enabled check should not lock on object (awang
     via cmccabe)
-
-    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
 
     HDFS-7254. Add documentation for hot swaping DataNode drives (Lei Xu via
     Colin P. McCabe)
@@ -328,6 +329,33 @@ Release 2.7.0 - UNRELEASED
     HDFS-6917. Add an hdfs debug command to validate blocks, call recoverlease,
     etc. (cmccabe)
 
+    HDFS-7356. Use DirectoryListing.hasMore() directly in nfs. (Li Lu via jing9)
+
+    HDFS-7357. FSNamesystem.checkFileProgress should log file path.
+    (Tsz Wo Nicholas Sze via wheat9)
+
+    HDFS-7335. Redundant checkOperation() in FSN.analyzeFileState().
+    (Milan Desai via shv)
+
+    HDFS-7333. Improve logging in Storage.tryLock(). (shv)
+
+    HDFS-7361. TestCheckpoint fails after change of log message related to
+    locking violation. (shv)
+
+    HDFS-7329. Improve logging when MiniDFSCluster fails to start.
+    (Byron Wong via shv)
+
+    HDFS-7336. Unused member DFSInputStream.buffersize. (Milan Desai via shv)
+
+    HDFS-7365. Remove hdfs.server.blockmanagement.MutableBlockCollection.
+    (Li Lu via wheat9)
+
+    HDFS-7381. Decouple the management of block id and gen stamps from
+    FSNamesystem. (wheat9)
+
+    HDFS-7375. Move FSClusterStats to o.a.h.h.hdfs.server.blockmanagement.
+    (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -358,8 +386,6 @@ Release 2.7.0 - UNRELEASED
     HDFS-7252. small refinement to the use of isInAnEZ in FSNamesystem.
     (Yi Liu via vinayakumarb)
 
-    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
-
     HDFS-7277. Remove explicit dependency on netty 3.2 in BKJournal. (wheat9)
 
     HDFS-7232. Populate hostname in httpfs audit log (Zoran Dimitrijevic 
@@ -381,7 +407,19 @@ Release 2.7.0 - UNRELEASED
     HDFS-7315. DFSTestUtil.readFileBuffer opens extra FSDataInputStream.
     (Plamen Jeliazkov via wheat9)
 
-Release 2.6.0 - UNRELEASED
+    HDFS-7324. haadmin command usage prints incorrect command name.
+    (Brahma Reddy Battula via suresh)
+
+    HDFS-7366. BlockInfo should take replication as an short in the constructor.
+    (Li Lu via wheat9)
+
+    HDFS-7387. NFS may only do partial commit due to a race between COMMIT and write
+    (brandonli)
+
+    HDFS-7389. Named user ACL cannot stop the user from accessing the FS entity.
+    (Vinayakumar B via cnauroth)
+
+Release 2.6.0 - 2014-11-15
 
   INCOMPATIBLE CHANGES
 
@@ -683,6 +721,14 @@ Release 2.6.0 - UNRELEASED
     HDFS-7313. Support optional configuration of AES cipher suite on
     DataTransferProtocol. (cnauroth)
 
+    HDFS-7276. Limit the number of byte arrays used by DFSOutputStream and
+    provide a mechanism for recycling arrays. (szetszwo)
+
+    HDFS-7233. NN logs unnecessary org.apache.hadoop.hdfs.protocol.UnresolvedPathException.
+    (Rushabh S Shah via jing9)
+
+    HDFS-7221. TestDNFencingWithReplication fails consistently. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6690. Deduplicate xattr names in memory. (wang)
@@ -983,6 +1029,34 @@ Release 2.6.0 - UNRELEASED
 
     HADOOP-11233. hadoop.security.kms.client.encrypted.key.cache.expiry
     property spelled wrong in core-default. (Stephen Chu via yliu) 
+
+    HDFS-7147. Update archival storage user documentation.
+    (Tsz Wo Nicholas Sze via wheat9)
+
+    HDFS-7340. Make rollingUpgrade start/finalize idempotent. (jing9)
+
+    HDFS-7334. Fix periodic failures of TestCheckpoint
+    #testTooManyEditReplayFailures. (Charles Lamb via wheat9)
+
+    HDFS-7355. TestDataNodeVolumeFailure#testUnderReplicationAfterVolFailure
+    fails on Windows, because we cannot deny access to the file owner.
+    (Chris Nauroth via wheat9)
+
+    HDFS-7218. FSNamesystem ACL operations should write to audit log on
+    failure. (clamb via yliu)
+
+    HDFS-7199. DFSOutputStream should not silently drop data if DataStreamer
+    crashes with an unchecked exception (rushabhs via cmccabe)
+
+    HDFS-7367. HDFS short-circuit read cannot negotiate shared memory slot and
+    file descriptors when SASL is enabled on DataTransferProtocol.
+    (Chris Nauroth via wheat9)
+
+    HDFS-7364. Balancer always shows zero Bytes Already Moved.
+    (Tsz Wo Nicholas Sze via jing9)
+
+    HDFS-7379. TestBalancer#testBalancerWithRamDisk creates test files
+    incorrectly. (Xiaoyu Yao via wheat9)
 
     BREAKDOWN OF HDFS-6134 AND HADOOP-10150 SUBTASKS AND RELATED JIRAS
   
@@ -1342,7 +1416,34 @@ Release 2.6.0 - UNRELEASED
     HDFS-7291. Persist in-memory replicas with appropriate unbuffered copy API
     on POSIX and Windows. (Xiaoyu Yao via cnauroth)
 
+    HDFS-7328. TestTraceAdmin assumes Unix line endings. (cnauroth)
+
+    HDFS-7359. NameNode in secured HA cluster fails to start if
+    dfs.namenode.secondary.http-address cannot be interpreted as a network
+    address. (cnauroth)
+
+    HDFS-7226. Fix TestDNFencing.testQueueingWithAppend. (Yongjun Zhang via jing9)
+
+    HDFS-7382. DataNode in secure mode may throw NullPointerException if client
+    connects before DataNode registers itself with NameNode. (cnauroth)
+
+    HDFS-7383. DataNode.requestShortCircuitFdsForRead may throw 
+    NullPointerException. (szetszwo via suresh)
+
+Release 2.5.2 - 2014-11-10
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
     HDFS-7274. Disable SSLv3 in HttpFS. (Robert Kanter via kasha)
+
 
 Release 2.5.1 - 2014-09-05
 

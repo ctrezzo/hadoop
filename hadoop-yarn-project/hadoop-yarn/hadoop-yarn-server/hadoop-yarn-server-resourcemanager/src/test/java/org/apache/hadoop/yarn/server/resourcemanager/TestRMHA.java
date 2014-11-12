@@ -28,8 +28,6 @@ import java.net.InetSocketAddress;
 
 import javax.ws.rs.core.MediaType;
 
-import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,10 +35,10 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
-import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -48,12 +46,14 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFencedException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -64,7 +64,7 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 public class TestRMHA {
   private Log LOG = LogFactory.getLog(TestRMHA.class);
-  private final Configuration configuration = new YarnConfiguration();
+  private Configuration configuration;
   private MockRM rm = null;
   private RMApp app = null;
   private RMAppAttempt attempt = null;
@@ -82,6 +82,8 @@ public class TestRMHA {
 
   @Before
   public void setUp() throws Exception {
+    configuration = new Configuration();
+    UserGroupInformation.setConfiguration(configuration);
     configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + ","
         + RM2_NODE_ID);
@@ -448,6 +450,67 @@ public class TestRMHA {
     rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
+  }
+
+  @Test(timeout = 90000)
+  public void testTransitionedToStandbyShouldNotHang() throws Exception {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    Configuration conf = new YarnConfiguration(configuration);
+
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override
+      public synchronized void updateApplicationState(ApplicationState appState) {
+        notifyStoreOperationFailed(new StoreFencedException());
+      }
+    };
+    memStore.init(conf);
+    rm = new MockRM(conf, memStore) {
+      @Override
+      void stopActiveServices() throws Exception {
+        Thread.sleep(10000);
+        super.stopActiveServices();
+      }
+    };
+    rm.init(conf);
+    final StateChangeRequestInfo requestInfo =
+        new StateChangeRequestInfo(
+            HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    assertEquals(STATE_ERR, HAServiceState.INITIALIZING, rm.adminService
+        .getServiceStatus().getState());
+    assertFalse("RM is ready to become active before being started",
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    checkMonitorHealth();
+
+    rm.start();
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // 2. Transition to Active.
+    rm.adminService.transitionToActive(requestInfo);
+
+    // 3. Try Transition to standby
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          rm.transitionToStandby(true);
+        } catch (IOException e) {
+          e.printStackTrace();
+        } catch (Exception e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+    });
+    t.start();
+
+    rm.getRMContext().getStateStore().updateApplicationState(null);
+    t.join(); // wait for thread to finish
+
+    rm.adminService.transitionToStandby(requestInfo);
+    checkStandbyRMFunctionality();
+    rm.stop();
   }
 
   public void innerTestHAWithRMHostName(boolean includeBindHost) {
