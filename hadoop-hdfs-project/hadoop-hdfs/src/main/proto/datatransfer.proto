@@ -123,6 +123,7 @@ message OpWriteBlockProto {
    * to ignore this hint.
    */
   optional bool allowLazyPersist = 13 [default = false];
+  optional bool pinning = 14 [default = false];
 }
   
 message OpTransferBlockProto {

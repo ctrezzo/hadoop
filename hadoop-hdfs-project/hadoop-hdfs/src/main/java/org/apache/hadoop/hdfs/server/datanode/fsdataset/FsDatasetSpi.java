@@ -508,4 +508,8 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
     * Callback from RamDiskAsyncLazyPersistService upon async lazy persist task fail
     */
    public void onFailLazyPersist(String bpId, long blockId);
+   
+   public void setPinning(ExtendedBlock block) throws IOException;
+   
+   public boolean getPinning(ExtendedBlock block) throws IOException; 
 }

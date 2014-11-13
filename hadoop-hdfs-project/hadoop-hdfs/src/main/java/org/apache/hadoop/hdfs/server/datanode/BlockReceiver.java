@@ -131,6 +131,8 @@ class BlockReceiver implements Closeable {
   private long lastResponseTime = 0;
   private boolean isReplaceBlock = false;
   private DataOutputStream replyOut = null;
+  
+  private boolean pinning;
 
   BlockReceiver(final ExtendedBlock block, final StorageType storageType,
       final DataInputStream in,
@@ -140,7 +142,8 @@ class BlockReceiver implements Closeable {
       final String clientname, final DatanodeInfo srcDataNode,
       final DataNode datanode, DataChecksum requestedChecksum,
       CachingStrategy cachingStrategy,
-      final boolean allowLazyPersist) throws IOException {
+      final boolean allowLazyPersist,
+      final boolean pinning) throws IOException {
     try{
       this.block = block;
       this.in = in;
@@ -172,6 +175,7 @@ class BlockReceiver implements Closeable {
             + "\n  cachingStrategy = " + cachingStrategy
             );
       }
+      this.pinning = pinning;
 
       //
       // Open local disk out
@@ -1305,6 +1309,11 @@ class BlockReceiver implements Closeable {
           : 0;
       block.setNumBytes(replicaInfo.getNumBytes());
       datanode.data.finalizeBlock(block);
+      
+      if (pinning) {
+        datanode.data.setPinning(block);
+      }
+      
       datanode.closeBlock(
           block, DataNode.EMPTY_DEL_HINT, replicaInfo.getStorageUuid());
       if (ClientTraceLog.isInfoEnabled() && isClient) {

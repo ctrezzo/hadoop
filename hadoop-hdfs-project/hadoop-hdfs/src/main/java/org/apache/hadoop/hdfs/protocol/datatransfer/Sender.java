@@ -129,7 +129,8 @@ public class Sender implements DataTransferProtocol {
       final long latestGenerationStamp,
       DataChecksum requestedChecksum,
       final CachingStrategy cachingStrategy,
-      final boolean allowLazyPersist) throws IOException {
+      final boolean allowLazyPersist,
+      final boolean pinning) throws IOException {
     ClientOperationHeaderProto header = DataTransferProtoUtil.buildClientHeader(
         blk, clientName, blockToken);
     
@@ -148,7 +149,8 @@ public class Sender implements DataTransferProtocol {
       .setLatestGenerationStamp(latestGenerationStamp)
       .setRequestedChecksum(checksumProto)
       .setCachingStrategy(getCachingStrategy(cachingStrategy))
-      .setAllowLazyPersist(allowLazyPersist);
+      .setAllowLazyPersist(allowLazyPersist)
+      .setPinning(pinning);
     
     if (source != null) {
       proto.setSource(PBHelper.convertDatanodeInfo(source));
