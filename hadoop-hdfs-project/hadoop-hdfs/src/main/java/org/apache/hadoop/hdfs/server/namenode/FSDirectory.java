@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -96,6 +97,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Both FSDirectory and FSNamesystem manage the state of the namespace.
@@ -151,6 +153,10 @@ public class FSDirectory implements Closeable {
   // lock to protect the directory and BlockMap
   private final ReentrantReadWriteLock dirLock;
 
+  private final boolean isPermissionEnabled;
+  private final String fsOwnerShortUserName;
+  private final String supergroup;
+
   // utility methods to acquire and release read lock and write lock
   void readLock() {
     this.dirLock.readLock().lock();
@@ -193,10 +199,19 @@ public class FSDirectory implements Closeable {
    */
   private final NameCache<ByteArray> nameCache;
 
-  FSDirectory(FSNamesystem ns, Configuration conf) {
+  FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this.dirLock = new ReentrantReadWriteLock(true); // fair
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
+    this.isPermissionEnabled = conf.getBoolean(
+      DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
+      DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
+    this.fsOwnerShortUserName =
+      UserGroupInformation.getCurrentUser().getShortUserName();
+    this.supergroup = conf.get(
+      DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
+      DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
+
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
     this.lsLimit = configuredLimit>0 ?
@@ -836,6 +851,29 @@ public class FSDirectory implements Closeable {
     // srcInode and its subtree cannot contain snapshottable directories with
     // snapshots
     checkSnapshot(srcInode, null);
+  }
+
+  /**
+   * This is a wrapper for resolvePath(). If the path passed
+   * is prefixed with /.reserved/raw, then it checks to ensure that the caller
+   * has super user has super user privileges.
+   *
+   * @param pc The permission checker used when resolving path.
+   * @param path The path to resolve.
+   * @param pathComponents path components corresponding to the path
+   * @return if the path indicates an inode, return path after replacing up to
+   *         <inodeid> with the corresponding path of the inode, else the path
+   *         in {@code src} as is. If the path refers to a path in the "raw"
+   *         directory, return the non-raw pathname.
+   * @throws FileNotFoundException
+   * @throws AccessControlException
+   */
+  String resolvePath(FSPermissionChecker pc, String path, byte[][] pathComponents)
+      throws FileNotFoundException, AccessControlException {
+    if (isReservedRawName(path) && isPermissionEnabled) {
+      pc.checkSuperuserPrivilege();
+    }
+    return resolvePath(path, pathComponents, this);
   }
 
   private class RenameOperation {
@@ -3302,5 +3340,77 @@ public class FSDirectory implements Closeable {
               "Modification on a read-only snapshot is disallowed");
     }
     return inodesInPath;
+  }
+
+  FSPermissionChecker getPermissionChecker()
+    throws AccessControlException {
+    try {
+      return new FSPermissionChecker(fsOwnerShortUserName, supergroup,
+          NameNode.getRemoteUser());
+    } catch (IOException ioe) {
+      throw new AccessControlException(ioe);
+    }
+  }
+
+  void checkOwner(FSPermissionChecker pc, String path)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, true, null, null, null, null);
+  }
+
+  void checkPathAccess(FSPermissionChecker pc, String path,
+                       FsAction access)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, null, null, access, null);
+  }
+  void checkParentAccess(
+      FSPermissionChecker pc, String path, FsAction access)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, null, access, null, null);
+  }
+
+  void checkAncestorAccess(
+      FSPermissionChecker pc, String path, FsAction access)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, access, null, null, null);
+  }
+
+  void checkTraverse(FSPermissionChecker pc, String path)
+      throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, false, null, null, null, null);
+  }
+
+  /**
+   * Check whether current user have permissions to access the path. For more
+   * details of the parameters, see
+   * {@link FSPermissionChecker#checkPermission}.
+   */
+  private void checkPermission(
+    FSPermissionChecker pc, String path, boolean doCheckOwner,
+    FsAction ancestorAccess, FsAction parentAccess, FsAction access,
+    FsAction subAccess)
+    throws AccessControlException, UnresolvedLinkException {
+    checkPermission(pc, path, doCheckOwner, ancestorAccess,
+        parentAccess, access, subAccess, false, true);
+  }
+
+  /**
+   * Check whether current user have permissions to access the path. For more
+   * details of the parameters, see
+   * {@link FSPermissionChecker#checkPermission}.
+   */
+  void checkPermission(
+      FSPermissionChecker pc, String path, boolean doCheckOwner,
+      FsAction ancestorAccess, FsAction parentAccess, FsAction access,
+      FsAction subAccess, boolean ignoreEmptyDir, boolean resolveLink)
+      throws AccessControlException, UnresolvedLinkException {
+    if (!pc.isSuperUser()) {
+      readLock();
+      try {
+        pc.checkPermission(path, this, doCheckOwner, ancestorAccess,
+            parentAccess, access, subAccess, ignoreEmptyDir, resolveLink);
+      } finally {
+        readUnlock();
+      }
+    }
   }
 }

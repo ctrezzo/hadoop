@@ -422,6 +422,8 @@ public class FSEditLog implements LogsPurgeable {
         editLogStream.write(op);
       } catch (IOException ex) {
         // All journals failed, it is handled in logSync.
+      } finally {
+        op.reset();
       }
 
       endTransaction(start);

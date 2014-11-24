@@ -16,23 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.hs.protocol;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.security.KerberosInfo;
-import org.apache.hadoop.security.RefreshUserMappingsProtocol;
-import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
 
-/**
- * Protocol use
- * 
- */
-@KerberosInfo(serverPrincipal = CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
-@Private
-@InterfaceStability.Evolving
-public interface HSAdminProtocol extends GetUserMappingsProtocol,
-    RefreshUserMappingsProtocol, HSAdminRefreshProtocol {
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+public class PeriodGroupsMapping implements GroupMappingServiceProvider {
+  
+  @Override
+  public List<String> getGroups(String user) {
+    return Arrays.asList(user + ".group", user + "subgroup1", user + "subgroup2");
+  }
+
+  @Override
+  public void cacheGroupsRefresh() throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void cacheGroupsAdd(List<String> groups) throws IOException {
+    throw new UnsupportedOperationException();
+  }
 
 }
