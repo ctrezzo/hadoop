@@ -1461,14 +1461,14 @@
   <property>
     <description>The address of the client interface in the SCM
     (shared cache manager)</description>
-    <name>yarn.sharedcache.client.server.address</name>
+    <name>yarn.sharedcache.client-server.address</name>
     <value>0.0.0.0:8045</value>
   </property>
 
   <property>
     <description>The number of threads used to handle shared cache manager
     requests from clients (50 by default)</description>
-    <name>yarn.sharedcache.client.server.thread-count</name>
+    <name>yarn.sharedcache.client-server.thread-count</name>
     <value>50</value>
   </property>
 

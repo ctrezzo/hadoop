@@ -58,6 +58,7 @@ public class ClientSCMProtocolPBClientImpl implements ClientSCMProtocol,
   public void close() {
     if (this.proxy != null) {
       RPC.stopProxy(this.proxy);
+      this.proxy = null;
     }
   }
 

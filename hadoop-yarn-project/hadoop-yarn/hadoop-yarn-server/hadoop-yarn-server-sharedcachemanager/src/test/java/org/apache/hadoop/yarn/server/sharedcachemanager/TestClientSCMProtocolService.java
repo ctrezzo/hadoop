@@ -109,14 +109,17 @@ public class TestClientSCMProtocolService {
   public void cleanUp() {
     if (store != null) {
       store.stop();
+      store = null;
     }
 
     if (service != null) {
       service.stop();
+      service = null;
     }
 
     if (clientSCMProxy != null) {
       RPC.stopProxy(clientSCMProxy);
+      clientSCMProxy = null;
     }
   }
 

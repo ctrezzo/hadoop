@@ -1474,14 +1474,14 @@ public class YarnConfiguration extends Configuration {
 
   /** The address of the client interface in the SCM. */
   public static final String SCM_CLIENT_SERVER_ADDRESS =
-      SHARED_CACHE_PREFIX + "client.server.address";
+      SHARED_CACHE_PREFIX + "client-server.address";
   public static final int DEFAULT_SCM_CLIENT_SERVER_PORT = 8045;
   public static final String DEFAULT_SCM_CLIENT_SERVER_ADDRESS = "0.0.0.0:"
       + DEFAULT_SCM_CLIENT_SERVER_PORT;
 
   /** The number of threads used to handle shared cache manager requests. */
   public static final String SCM_CLIENT_SERVER_THREAD_COUNT =
-      SHARED_CACHE_PREFIX + "client.server.thread-count";
+      SHARED_CACHE_PREFIX + "client-server.thread-count";
   public static final int DEFAULT_SCM_CLIENT_SERVER_THREAD_COUNT = 50;
 
   /** the checksum algorithm implementation **/
