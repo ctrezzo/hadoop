@@ -393,6 +393,35 @@ Release 2.7.0 - UNRELEASED
     HDFS-7419. Improve error messages for DataNode hot swap drive feature (Lei
     Xu via Colin P. Mccabe)
 
+    HDFS-7436. Consolidate implementation of concat(). (wheat9)
+
+    HDFS-7440. Consolidate snapshot related operations in a single class.
+    (wheat9)
+
+    HDFS-6803 Document DFSClient#DFSInputStream expectations reading and preading
+    in concurrent context. (stack via stevel)
+
+    HDFS-7310. Mover can give first priority to local DN if it has target storage type 
+    available in local DN. (Vinayakumar B via umamahesh)
+
+    HDFS-7210. Avoid two separate RPC's namenode.append() and namenode.getFileInfo() 
+    for an append call from DFSClient. (Vinayakumar B via umamahesh)
+
+    HDFS-7450. Consolidate the implementation of GetFileInfo(), GetListings() and
+    GetContentSummary() into a single class. (wheat9)
+
+    HDFS-7438. Consolidate the implementation of rename() into a single class.
+    (wheat9)
+
+    HDFS-7462. Consolidate implementation of mkdirs() into a single class.
+    (wheat9)
+
+    HDFS-7446. HDFS inotify should have the ability to determine what txid it
+    has read up to (cmccabe)
+
+    HDFS-6735. A minor optimization to avoid pread() be blocked by read()
+    inside the same DFSInputStream (Lars Hofhansl via stack)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -478,8 +507,20 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7374. Allow decommissioning of dead DataNodes. (Zhe Zhang)
 
-    HDFS-7403. Inaccurate javadoc of  BlockUCState#COMPLETE state. (
+    HDFS-7403. Inaccurate javadoc of BlockUCState#COMPLETE state. (
     Yongjun Zhang via yliu)
+
+    HDFS-7303. NN UI fails to distinguish datanodes on the same host.
+    (Benoy Antony via wheat9)
+
+    HDFS-7097. Allow block reports to be processed during checkpointing on
+    standby name node. (kihwal via wang)
+
+    HDFS-7444. convertToBlockUnderConstruction should preserve BlockCollection.
+    (wheat9)
+
+    HDFS-7448 TestBookKeeperHACheckpoints fails in trunk build
+    (Akira Ajisaka via stevel)
 
 Release 2.6.1 - UNRELEASED
 

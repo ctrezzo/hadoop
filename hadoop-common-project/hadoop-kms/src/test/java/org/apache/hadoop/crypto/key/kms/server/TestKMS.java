@@ -33,11 +33,9 @@ import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -53,8 +51,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -621,16 +617,21 @@ public class TestKMS {
     for (KMSACLs.Type type : KMSACLs.Type.values()) {
       conf.set(type.getAclConfigKey(), type.toString());
     }
-    conf.set(KMSACLs.Type.CREATE.getAclConfigKey(),"CREATE,ROLLOVER,GET,SET_KEY_MATERIAL,GENERATE_EEK");
-    conf.set(KMSACLs.Type.ROLLOVER.getAclConfigKey(),"CREATE,ROLLOVER,GET,SET_KEY_MATERIAL,GENERATE_EEK");
-    conf.set(KMSACLs.Type.GENERATE_EEK.getAclConfigKey(),"CREATE,ROLLOVER,GET,SET_KEY_MATERIAL,GENERATE_EEK");
+    conf.set(KMSACLs.Type.CREATE.getAclConfigKey(),"CREATE,ROLLOVER,GET,SET_KEY_MATERIAL,GENERATE_EEK,DECRYPT_EEK");
+    conf.set(KMSACLs.Type.ROLLOVER.getAclConfigKey(),"CREATE,ROLLOVER,GET,SET_KEY_MATERIAL,GENERATE_EEK,DECRYPT_EEK");
+    conf.set(KMSACLs.Type.GENERATE_EEK.getAclConfigKey(),"CREATE,ROLLOVER,GET,SET_KEY_MATERIAL,GENERATE_EEK,DECRYPT_EEK");
     conf.set(KMSACLs.Type.DECRYPT_EEK.getAclConfigKey(),"CREATE,ROLLOVER,GET,SET_KEY_MATERIAL,GENERATE_EEK");
 
-
     conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "test_key.MANAGEMENT", "CREATE");
+    conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "some_key.MANAGEMENT", "ROLLOVER");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "MANAGEMENT", "DECRYPT_EEK");
+    conf.set(KMSConfiguration.WHITELIST_KEY_ACL_PREFIX + "ALL", "DECRYPT_EEK");
+
     conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "all_access.ALL", "GENERATE_EEK");
     conf.set(KeyAuthorizationKeyProvider.KEY_ACL + "all_access.DECRYPT_EEK", "ROLLOVER");
     conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT", "ROLLOVER");
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "GENERATE_EEK", "SOMEBODY");
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "ALL", "ROLLOVER");
 
     writeConf(testDir, conf);
 
@@ -673,6 +674,41 @@ public class TestKMS {
               } catch (Exception e) {
                 // Ignore
               }
+            } catch (Exception ex) {
+              Assert.fail(ex.getMessage());
+            }
+            return null;
+          }
+        });
+
+        // Test whitelist key access..
+        // DECRYPT_EEK is whitelisted for MANAGEMENT operations only
+        doAs("DECRYPT_EEK", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
+            try {
+              Options options = new KeyProvider.Options(conf);
+              Map<String, String> attributes = options.getAttributes();
+              HashMap<String,String> newAttribs = new HashMap<String, String>(attributes);
+              newAttribs.put("key.acl.name", "some_key");
+              options.setAttributes(newAttribs);
+              KeyProvider.KeyVersion kv = kp.createKey("kk0", options);
+              Assert.assertNull(kv.getMaterial());
+              KeyVersion rollVersion = kp.rollNewVersion("kk0");
+              Assert.assertNull(rollVersion.getMaterial());
+              KeyProviderCryptoExtension kpce =
+                  KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
+              try {
+                kpce.generateEncryptedKey("kk0");
+                Assert.fail("User [DECRYPT_EEK] should not be allowed to generate_eek on kk0");
+              } catch (Exception e) {
+                // Ignore
+              }
+              newAttribs = new HashMap<String, String>(attributes);
+              newAttribs.put("key.acl.name", "all_access");
+              options.setAttributes(newAttribs);
+              kp.createKey("kkx", options);
             } catch (Exception ex) {
               Assert.fail(ex.getMessage());
             }
@@ -789,6 +825,40 @@ public class TestKMS {
               KeyProviderCryptoExtension kpce =
                   KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
               kpce.decryptEncryptedKey(ekv);
+            } catch (Exception ex) {
+              Assert.fail(ex.getMessage());
+            }
+            return null;
+          }
+        });
+        return null;
+      }
+    });
+
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "MANAGEMENT", "");
+    conf.set(KMSConfiguration.DEFAULT_KEY_ACL_PREFIX + "GENERATE_EEK", "*");
+    writeConf(testDir, conf);
+
+    runServer(null, null, testDir, new KMSCallable<Void>() {
+
+      @Override
+      public Void call() throws Exception {
+        final Configuration conf = new Configuration();
+        conf.setInt(KeyProvider.DEFAULT_BITLENGTH_NAME, 128);
+        final URI uri = createKMSUri(getKMSUrl());
+
+        doAs("GENERATE_EEK", new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            KeyProvider kp = new KMSClientProvider(uri, conf);
+            try {
+              KeyProviderCryptoExtension kpce =
+                  KeyProviderCryptoExtension.createKeyProviderCryptoExtension(kp);
+              try {
+                kpce.generateEncryptedKey("k1");
+              } catch (Exception e) {
+                Assert.fail("User [GENERATE_EEK] should be allowed to generate_eek on k1");
+              }
             } catch (Exception ex) {
               Assert.fail(ex.getMessage());
             }

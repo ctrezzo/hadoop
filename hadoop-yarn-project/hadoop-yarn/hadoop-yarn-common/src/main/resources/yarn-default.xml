@@ -420,6 +420,14 @@
   </property>
 
   <property>
+    <description>Local path where the RM state will be stored when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.LeveldbRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.leveldb-state-store.path</name>
+    <value>${hadoop.tmp.dir}/yarn/system/rmstore</value>
+  </property>
+
+  <property>
     <description>Enable RM high-availability. When enabled,
       (1) The RM starts in the Standby mode by default, and transitions to
       the Active mode when prompted to.
@@ -1355,7 +1363,8 @@
 
   <property>
     <description>
-    Default maximum number of retires for timeline servive client.
+    Default maximum number of retires for timeline servive client
+    and value -1 means no limit.
     </description>
     <name>yarn.timeline-service.client.max-retries</name>
     <value>30</value>
