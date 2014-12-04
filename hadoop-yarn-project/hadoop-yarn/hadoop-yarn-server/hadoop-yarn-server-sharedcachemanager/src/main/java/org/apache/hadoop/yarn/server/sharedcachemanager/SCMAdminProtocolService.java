@@ -71,8 +71,6 @@ public class SCMAdminProtocolService extends AbstractService implements
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
-
-
     super.serviceInit(conf);
   }
 

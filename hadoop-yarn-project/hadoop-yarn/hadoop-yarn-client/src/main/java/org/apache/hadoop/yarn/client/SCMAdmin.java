@@ -28,6 +28,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 import org.apache.hadoop.yarn.server.api.SCMAdminProtocol;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RunSharedCacheCleanerTaskResponse;
@@ -93,12 +94,7 @@ public class SCMAdmin extends Configured implements Tool {
     }
   }
 
-  private static UserGroupInformation getUGI(Configuration conf
-  ) throws IOException {
-    return UserGroupInformation.getCurrentUser();
-  }
-
-  private SCMAdminProtocol createSCMAdminProtocol() throws IOException {
+  protected SCMAdminProtocol createSCMAdminProtocol() throws IOException {
     // Get the current configuration
     final YarnConfiguration conf = new YarnConfiguration(getConf());
 
@@ -108,16 +104,8 @@ public class SCMAdmin extends Configured implements Tool {
         YarnConfiguration.DEFAULT_SCM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_SCM_ADMIN_PORT);
     final YarnRPC rpc = YarnRPC.create(conf);
-    
     SCMAdminProtocol scmAdminProtocol =
-      getUGI(conf).doAs(new PrivilegedAction<SCMAdminProtocol>() {
-        @Override
-        public SCMAdminProtocol run() {
-          return (SCMAdminProtocol) rpc.getProxy(SCMAdminProtocol.class,
-              addr, conf);
-        }
-      });
-
+        (SCMAdminProtocol) rpc.getProxy(SCMAdminProtocol.class, addr, conf);
     return scmAdminProtocol;
   }
   
@@ -144,45 +132,37 @@ public class SCMAdmin extends Configured implements Tool {
       return -1;
     }
 
-    int exitCode = -1;
     int i = 0;
     String cmd = args[i++];
-    //
-    // verify that we have enough command line parameters
-    //
-    if ("-runCleanerTask".equals(cmd)) {
-      if (args.length != 1) {
-        printUsage(cmd);
-        return exitCode;
-      }
-    }
-    
-    exitCode = 0;
+
     try {
       if ("-runCleanerTask".equals(cmd)) {
-        exitCode = runCleanerTask();
+        if (args.length != 1) {
+          printUsage(cmd);
+          return -1;
+        } else {
+          return runCleanerTask();
+        }
       } else if ("-help".equals(cmd)) {
         if (i < args.length) {
           printUsage(args[i]);
         } else {
           printHelp("");
         }
+        return 0;
       } else {
-        exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");
         printUsage("");
-        printUsage("");
+        return -1;
       }
 
     } catch (IllegalArgumentException arge) {
-      exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
       printUsage(cmd);
     } catch (RemoteException e) {
       //
       // This is a error returned by hadoop server. Print
-      // out the first line of the error mesage, ignore the stack trace.
-      exitCode = -1;
+      // out the first line of the error message, ignore the stack trace.
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
@@ -193,11 +173,10 @@ public class SCMAdmin extends Configured implements Tool {
                            + ex.getLocalizedMessage());
       }
     } catch (Exception e) {
-      exitCode = -1;
       System.err.println(cmd.substring(1) + ": "
                          + e.getLocalizedMessage());
     }
-    return exitCode;
+    return -1;
   }
 
   public static void main(String[] args) throws Exception {

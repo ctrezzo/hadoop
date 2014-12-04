@@ -1410,7 +1410,7 @@ public class YarnConfiguration extends Configuration {
 
   /** Number of threads used to handle SCM admin interface. */
   public static final String SCM_ADMIN_CLIENT_THREAD_COUNT =
-      SHARED_CACHE_PREFIX + "admin.client.thread-count";
+      SHARED_CACHE_PREFIX + "admin.thread-count";
   public static final int DEFAULT_SCM_ADMIN_CLIENT_THREAD_COUNT = 1;
 
   // In-memory SCM store configuration
