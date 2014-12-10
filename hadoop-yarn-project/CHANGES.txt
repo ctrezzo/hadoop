@@ -13,6 +13,8 @@ Trunk - Unreleased
     YARN-2472. yarn-daemons.sh should jsut call yarn directly (Masatake Iwasaki
     via aw)
 
+    YARN-2437. start-yarn.sh/stop-yarn should give info (Varun Saxena via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -208,6 +210,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2930. Fixed TestRMRestart#testRMRestartRecoveringNodeLabelManager
     intermittent failure. (Wangda Tan via jianhe)
+
+    YARN-2924. Fixed RMAdminCLI to not convert node labels to lower case.
+    (Wangda Tan via jianhe)
 
 Release 2.6.0 - 2014-11-18
 
