@@ -449,6 +449,8 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7498. Simplify the logic in INodesInPath. (jing9)
 
+    HDFS-7463. Simplify FSNamesystem#getBlockLocationsUpdateTimes. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
@@ -570,6 +572,8 @@ Release 2.7.0 - UNRELEASED
     HDFS-7475. Make TestLazyPersistFiles#testLazyPersistBlocksAreSaved
     deterministic. (Xiaoyu Yao via Arpit Agarwal)
 
+    HDFS-7515. Fix new findbugs warnings in hadoop-hdfs. (wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -590,6 +594,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7489. Incorrect locking in FsVolumeList#checkDirs can hang datanodes
     (Noah Lorang via Colin P. McCabe)
+
+    HDFS-7503. Namenode restart after large deletions can cause slow
+    processReport. (Arpit Agarwal)
 
 Release 2.6.0 - 2014-11-18
 
