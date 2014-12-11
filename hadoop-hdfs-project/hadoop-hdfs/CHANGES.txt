@@ -433,6 +433,24 @@ Release 2.7.0 - UNRELEASED
     HDFS-7478. Move org.apache.hadoop.hdfs.server.namenode.NNConf to
     FSNamesystem. (Li Lu via wheat9)
 
+    HDFS-7474. Avoid resolving path in FSPermissionChecker. (jing9)
+
+    HDFS-7459. Consolidate cache-related implementation in FSNamesystem into
+    a single class. (wheat9)
+
+    HDFS-7476. Consolidate ACL-related operations to a single class.
+    (wheat9 via cnauroth)
+
+    HDFS-7384. 'getfacl' command and 'getAclStatus' output should be in sync.
+    (Vinayakumar B via cnauroth)
+
+    HDFS-7486. Consolidate XAttr-related implementation into a single class.
+    (wheat9)
+
+    HDFS-7498. Simplify the logic in INodesInPath. (jing9)
+
+    HDFS-7463. Simplify FSNamesystem#getBlockLocationsUpdateTimes. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
@@ -539,6 +557,23 @@ Release 2.7.0 - UNRELEASED
     HDFS-7472. Fix typo in message of ReplicaNotFoundException.
     (Masatake Iwasaki via wheat9)
 
+    HDFS-7473. Document setting dfs.namenode.fs-limits.max-directory-items to 0
+    is invalid. (Akira AJISAKA via cnauroth)
+
+    HDFS-7481. Add ACL indicator to the "Permission Denied" exception.
+    (vinayakumarb)
+
+    HDFS-7502. Fix findbugs warning in hdfs-nfs project.
+    (Brandon Li via wheat9)
+
+    HDFS-5578. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags
+    in doc comments. (Andrew Purtell via wheat9)
+
+    HDFS-7475. Make TestLazyPersistFiles#testLazyPersistBlocksAreSaved
+    deterministic. (Xiaoyu Yao via Arpit Agarwal)
+
+    HDFS-7515. Fix new findbugs warnings in hadoop-hdfs. (wheat9)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -556,6 +591,12 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-4882. Prevent the Namenode's LeaseManager from looping forever in
     checkLeases (Ravi Prakash via Colin P. McCabe)
+
+    HDFS-7489. Incorrect locking in FsVolumeList#checkDirs can hang datanodes
+    (Noah Lorang via Colin P. McCabe)
+
+    HDFS-7503. Namenode restart after large deletions can cause slow
+    processReport. (Arpit Agarwal)
 
 Release 2.6.0 - 2014-11-18
 

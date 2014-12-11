@@ -11,6 +11,8 @@ Trunk (Unreleased)
 
     HADOOP-9902. Shell script rewrite (aw)
 
+    HADOOP-10950. rework heap management vars (John Smith via aw)
+
   NEW FEATURES
 
     HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
@@ -22,6 +24,10 @@ Trunk (Unreleased)
     (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
     Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
     Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
+
+    HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
+
+    HADOOP-11353. Add support for .hadooprc (aw)
     
   IMPROVEMENTS
 
@@ -147,6 +153,9 @@ Trunk (Unreleased)
 
     HADOOP-11081. Document hadoop properties expected to be set by the shell 
     code in *-env.sh (aw)
+
+    HADOOP-11352 Clean up test-patch.sh to disable "+1 contrib tests"
+    (Akira AJISAKA via stevel)
 
   BUG FIXES
 
@@ -368,6 +377,8 @@ Release 2.7.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-10530 Make hadoop build on Java7+ only (stevel)
+
   NEW FEATURES
 
     HADOOP-10987. Provide an iterator-based listing API for FileSystem (kihwal)
@@ -412,6 +423,14 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11356. Removed deprecated o.a.h.fs.permission.AccessControlException.
     (Li Lu via wheat9)
+
+    HADOOP-11313. Adding a document about NativeLibraryChecker.
+    (Tsuyoshi OZAWA via cnauroth)
+
+    HADOOP-11287. Simplify UGI#reloginFromKeytab for Java 7+.
+    (Li Lu via wheat9)
+
+    HADOOP-10476) Bumping the findbugs version to 3.0.0. (wheat9)
 
   OPTIMIZATIONS
 
@@ -508,6 +527,54 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11355. When accessing data in HDFS and the key has been deleted,
     a Null Pointer Exception is shown. (Arun Suresh via wang)
 
+    HADOOP-11343. Overflow is not properly handled in caclulating final iv for
+    AES CTR. (Jerry Chen via wang)
+
+    HADOOP-11354. ThrottledInputStream doesn't perform effective throttling.
+    (Ted Yu via jing9)
+
+    HADOOP-11329. Add JAVA_LIBRARY_PATH to KMS startup options. (Arun Suresh via wang)
+
+    HADOOP-11363 Hadoop maven surefire-plugin uses must set heap size. (stevel)
+
+    HADOOP-10134 [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in doc
+    comments. (apurtell via stevel)
+
+    HADOOP-11367. Fix warnings from findbugs 3.0 in hadoop-streaming. (Li Lu via wheat9)
+
+    HADOOP-11369. Fix new findbugs warnings in hadoop-mapreduce-client,
+    non-core directories. (Li Lu via wheat9)
+
+    HADOOP-11368. Fix SSLFactory truststore reloader thread leak in
+    KMSClientProvider. (Arun Suresh via wang)
+
+    HADOOP-11372. Fix new findbugs warnings in mapreduce-examples.
+    (Li Lu via wheat9)
+
+    HADOOP-11273. TestMiniKdc failure: login options not compatible with IBM
+    JDK. (Gao Zhong Liang via wheat9)
+
+    HADOOP-11379. Fix new findbugs warnings in hadoop-auth*. (Li Lu via wheat9)
+
+    HADOOP-11378. Fix new findbugs warnings in hadoop-kms. (Li Lu via wheat9)
+
+    HADOOP-11349. RawLocalFileSystem leaks file descriptor while creating a
+    file if creat succeeds but chmod fails. (Varun Saxena via Colin P. McCabe)
+
+    HADOOP-11381. Fix findbugs warnings in hadoop-distcp, hadoop-aws,
+    hadoop-azure, and hadoop-openstack. (Li Lu via wheat9)
+
+    HADOOP-10482. Fix various findbugs warnings in hadoop-common. (wheat9)
+
+    HADOOP-11388. Remove deprecated o.a.h.metrics.file.FileContext.
+    (Li Lu via wheat9)
+
+    HADOOP-11386. Replace \n by %n in format hadoop-common format strings.
+    (Li Lu via wheat9)
+
+    HADOOP-11211. mapreduce.job.classloader.system.classes semantics should be
+    be order-independent. (Yitong Zhou via gera)
+    
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

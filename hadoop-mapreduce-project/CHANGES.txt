@@ -235,6 +235,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5420. Remove mapreduce.task.tmp.dir from mapred-default.xml
+    (James Carman via harsh)
+
     MAPREDUCE-5932. Provide an option to use a dedicated reduce-side shuffle
     log (Gera Shegalov via jlowe)
 
@@ -245,6 +248,9 @@ Release 2.7.0 - UNRELEASED
     (Zhihai Xu via kasha)
 
   BUG FIXES
+
+    MAPREDUCE-6177. Minor typo in the EncryptedShuffle document about
+    ssl-client.xml (Yangping Wu via harsh)
 
     MAPREDUCE-5918. LineRecordReader can return the same decompressor to
     CodecPool multiple times (Sergey Murylev via raviprak)

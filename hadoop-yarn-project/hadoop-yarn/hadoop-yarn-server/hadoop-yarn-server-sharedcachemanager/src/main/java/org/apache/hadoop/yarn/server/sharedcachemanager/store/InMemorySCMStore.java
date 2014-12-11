@@ -86,6 +86,10 @@ public class InMemorySCMStore extends SCMStore {
   private int initialDelayMin;
   private int checkPeriodMin;
 
+  public InMemorySCMStore() {
+    super(InMemorySCMStore.class.getName());
+  }
+
   public InMemorySCMStore(AppChecker appChecker) {
     super(InMemorySCMStore.class.getName(), appChecker);
   }
