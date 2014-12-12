@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
 
+import com.google.common.annotations.VisibleForTesting;
+
 
 /**
  * An abstract class for the data store used by the shared cache manager
@@ -49,7 +51,8 @@ public abstract class SCMStore extends CompositeService {
     super(name);
   }
 
-  protected SCMStore(String name, AppChecker appChecker) {
+  @VisibleForTesting
+  SCMStore(String name, AppChecker appChecker) {
     super(name);
     this.appChecker = appChecker;
   }
