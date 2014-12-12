@@ -26,7 +26,10 @@ import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.ClientSCMMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.SharedCacheUploaderMetrics;
 
-// This class is used to summarize useful SCM metrics for webUI display
+/**
+ * This class is used to summarize useful shared cache manager metrics for the
+ * webUI display.
+ */
 @XmlRootElement(name = "SCMMetrics")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class SCMMetricsInfo {
@@ -60,5 +63,4 @@ public class SCMMetricsInfo {
   public long getCacheReleases() { return cacheReleases; }
   public long getAcceptedUploads() { return acceptedUploads; }
   public long getRejectUploads() { return rejectedUploads; }
-
 }

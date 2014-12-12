@@ -28,7 +28,7 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
 /**
- * A very simple web interface for the metric reported by
+ * A very simple web interface for the metrics reported by
  * {@link org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager}
  */
 public class SCMWebServer extends AbstractService {
@@ -44,25 +44,25 @@ public class SCMWebServer extends AbstractService {
   }
 
   @Override
-  public void serviceInit(Configuration conf) throws Exception {
+  protected void serviceInit(Configuration conf) throws Exception {
     this.bindAddress = getBindAddress(conf);
     super.serviceInit(conf);
   }
 
-  protected String getBindAddress(Configuration conf) {
+  private String getBindAddress(Configuration conf) {
     return conf.get(YarnConfiguration.SCM_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_SCM_WEBAPP_ADDRESS);
   }
 
   @Override
-  public void serviceStart() throws Exception {
+  protected void serviceStart() throws Exception {
     SCMWebApp scmWebApp = new SCMWebApp(scm);
     this.webApp = WebApps.$for("sharedcache").at(bindAddress).start(scmWebApp);
     LOG.info("Instantiated " + SCMWebApp.class.getName() + " at " + bindAddress);
   }
 
   @Override
-  public void serviceStop() throws Exception {
+  protected void serviceStop() throws Exception {
     if (this.webApp != null) {
       this.webApp.stop();
     }

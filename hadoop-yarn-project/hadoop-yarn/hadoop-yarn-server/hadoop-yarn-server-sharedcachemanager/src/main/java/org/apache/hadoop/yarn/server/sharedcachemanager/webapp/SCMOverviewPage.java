@@ -34,6 +34,9 @@ import org.apache.hadoop.yarn.webapp.view.TwoColumnLayout;
 
 import com.google.inject.Inject;
 
+/**
+ * This class is to render the shared cache manager web ui overview page.
+ */
 public class SCMOverviewPage extends TwoColumnLayout {
 
   @Override protected void preHead(Page.HTML<_> html) {
