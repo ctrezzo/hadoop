@@ -91,7 +91,7 @@ public class InMemorySCMStore extends SCMStore {
   }
 
   @VisibleForTesting
-  InMemorySCMStore(AppChecker appChecker) {
+  public InMemorySCMStore(AppChecker appChecker) {
     super(InMemorySCMStore.class.getName(), appChecker);
   }
 
