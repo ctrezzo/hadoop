@@ -13,6 +13,8 @@ Trunk - Unreleased
     YARN-2472. yarn-daemons.sh should jsut call yarn directly (Masatake Iwasaki
     via aw)
 
+    YARN-2437. start-yarn.sh/stop-yarn should give info (Varun Saxena via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -64,6 +66,9 @@ Release 2.7.0 - UNRELEASED
     if RM restart is enabled. (Rohith Sharmaks via jianhe)
 
   IMPROVEMENTS
+
+    YARN-2950. Change message to mandate, not suggest JS requirement on UI.
+    (Dustin Cote via harsh)
 
     YARN-2891. Failed Container Executor does not provide a clear error
     message. (Dustin Cote via harsh)
@@ -182,9 +187,6 @@ Release 2.7.0 - UNRELEASED
     YARN-2905. AggregatedLogsBlock page can infinitely loop if the aggregated
     log file is corrupted (Varun Saxena via jlowe)
 
-    YARN-2890. MiniYARNCluster should start the timeline server based on the
-    configuration. (Mit Desai via zjshen)
-
     YARN-2894. Fixed a bug regarding application view acl when RM fails over.
     (Rohith Sharmaks via jianhe)
 
@@ -193,6 +195,35 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2461. Fix PROCFS_USE_SMAPS_BASED_RSS_ENABLED property in
     YarnConfiguration. (rchiang via rkanter)
+
+    YARN-2869. CapacityScheduler should trim sub queue names when parse
+    configuration. (Wangda Tan via jianhe)
+
+    YARN-2927. [YARN-1492] InMemorySCMStore properties are inconsistent. 
+    (Ray Chiang via kasha)
+
+    YARN-2931. PublicLocalizer may fail until directory is initialized by
+    LocalizeRunner. (Anubhav Dhoot via kasha)
+
+    YARN-2910. FSLeafQueue can throw ConcurrentModificationException. 
+    (Wilfred Spiegelenburg via kasha)
+
+    YARN-2930. Fixed TestRMRestart#testRMRestartRecoveringNodeLabelManager
+    intermittent failure. (Wangda Tan via jianhe)
+
+    YARN-2924. Fixed RMAdminCLI to not convert node labels to lower case.
+    (Wangda Tan via jianhe)
+
+    YARN-2917. Fixed potential deadlock when system.exit is called in AsyncDispatcher
+    (Rohith Sharmaks via jianhe)
+
+    YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in 
+    SchedulerApplicationAttempt ctor. (devaraj)
+
+    YARN-2912 Jersey Tests failing with port in use. (varun saxena via stevel)
+
+    YARN-2356. yarn status command for non-existent application/application 
+    attempt/container is too verbose. (Sunil G via devaraj)
 
 Release 2.6.0 - 2014-11-18
 
