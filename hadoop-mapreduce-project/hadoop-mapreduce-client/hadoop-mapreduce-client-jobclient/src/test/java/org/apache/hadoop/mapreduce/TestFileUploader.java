@@ -1,0 +1,382 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+package org.apache.hadoop.mapreduce;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.jar.JarOutputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.sharedcache.SharedCacheClient;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+public class TestFileUploader {
+  protected static final Log LOG = LogFactory.getLog(TestFileUploader.class);
+  private static MiniDFSCluster dfs;
+  private static FileSystem localFs;
+  private static FileSystem remoteFs;
+  private static Configuration conf = new Configuration();
+  private static Path TEST_ROOT_DIR;
+  private static Path remoteStagingDir =
+      new Path(MRJobConfig.DEFAULT_MR_AM_STAGING_DIR);
+  protected String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
+
+  @Before
+  public void cleanup() throws Exception {
+    remoteFs.delete(remoteStagingDir, true);
+  }
+
+  @BeforeClass
+  public static void setup() throws IOException {
+    // create configuration, dfs, file system
+    localFs = FileSystem.getLocal(conf);
+    TEST_ROOT_DIR =
+        new Path("target", TestFileUploader.class.getName() + "-tmpDir")
+            .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
+    dfs = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
+    remoteFs = dfs.getFileSystem();
+  }
+
+  @AfterClass
+  public static void tearDown() {
+    try {
+      if (localFs != null) {
+        localFs.close();
+      }
+      if (remoteFs != null) {
+        remoteFs.close();
+      }
+      if (dfs != null) {
+        dfs.shutdown();
+      }
+    } catch (IOException ioe) {
+      LOG.info("IO exception in closing file system)" );
+      ioe.printStackTrace();
+    }
+  }
+
+  private class MyFileUploader extends FileUploader {
+    private SharedCacheClient mockscClient = mock(SharedCacheClient.class);
+
+    // Used for checksum calculation
+    private SharedCacheClient scClient = new SharedCacheClient();
+
+    MyFileUploader(FileSystem submitFs, Configuration conf)
+        throws IOException {
+      super(submitFs);
+      scClient.init(conf);
+      when(mockscClient.isScmAvailable()).thenReturn(true);
+      when(mockscClient.getFileChecksum(any(Path.class))).thenAnswer(
+          new Answer<String>() {
+        @Override
+        public String answer(InvocationOnMock invocation) throws Throwable {
+          Path file = (Path)invocation.getArguments()[0];
+          return scClient.getFileChecksum(file);
+        }
+      });
+    }
+
+    public void makeFileInSharedCache(Path localFile, Path remoteFile)
+        throws IOException {
+      when(mockscClient.use(any(ApplicationId.class),
+          eq(scClient.getFileChecksum(localFile)))).thenReturn(remoteFile);
+    }
+
+    @Override
+    protected SharedCacheClient createSharedCacheClient(Configuration conf) {
+      return mockscClient;
+    }
+  }
+
+  @Test
+  public void testSharedCacheDisabled() throws Exception {
+    JobConf jobConf = createJobConf();
+    Job job = new Job(jobConf);
+    job.setJobID(new JobID("1234", 1));
+
+    // shared cache is disabled by default
+    uploadFilesToRemoteFS(job, jobConf, 0, 0, 0, 0, false);
+
+  }
+
+  @Test
+  public void testSharedCacheEnabled() throws Exception {
+    JobConf jobConf = createJobConf();
+    jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "enabled");
+    Job job = new Job(jobConf);
+    job.setJobID(new JobID("1234", 1));
+
+    // shared cache is enabled for every file type
+    // the # of times SharedCacheClient.use is called should ==
+    // total # of files/libjars/archive/jobjar
+    uploadFilesToRemoteFS(job, jobConf, 8, 2, 3, 2, false);
+  }
+
+  @Test
+  public void testSharedCacheEnabledWithJobJarInSharedCache()
+      throws Exception {
+    JobConf jobConf = createJobConf();
+    jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "enabled");
+    Job job = new Job(jobConf);
+    job.setJobID(new JobID("1234", 1));
+
+    // shared cache is enabled for every file type
+    // the # of times SharedCacheClient.use is called should ==
+    // total # of files/libjars/archive/jobjar
+    uploadFilesToRemoteFS(job, jobConf, 8, 3, 3, 2, true);
+  }
+
+  @Test
+  public void testSharedCacheArchivesAndLibjarsEnabled() throws Exception {
+    JobConf jobConf = createJobConf();
+    jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "archives,libjars");
+    Job job = new Job(jobConf);
+    job.setJobID(new JobID("1234", 1));
+
+    // shared cache is enabled for archives and libjars type
+    // the # of times SharedCacheClient.use is called should ==
+    // total # of libjars and archives
+    uploadFilesToRemoteFS(job, jobConf, 5, 2, 1, 2, false);
+  }
+
+  private JobConf createJobConf() {
+    JobConf jobConf = new JobConf();
+    jobConf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
+    jobConf.setBoolean(YarnConfiguration.SHARED_CACHE_ENABLED, true);
+
+    jobConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, remoteFs.getUri().toString());
+    return jobConf;
+  }
+
+  private Path copyToRemote(Path jar) throws IOException {
+    Path remoteFile = new Path("/tmp", jar.getName());
+    remoteFs.copyFromLocalFile(jar, remoteFile);
+    return remoteFile;
+  }
+
+  private void makeJarAvailableInSharedCache(
+      Path jar, MyFileUploader fileUploader)
+      throws IOException {
+    // make jar cache available
+    copyToRemote(jar);
+    Path remoteFile = copyToRemote(jar);
+    fileUploader.makeFileInSharedCache(jar, remoteFile);
+  }
+
+  private void uploadFilesToRemoteFS(Job job, JobConf jobConf,
+     int useCallCountExpected, int cachedFileCountExpected,
+     int numOfFilesShouldBeUploadedToSharedCacheExpected,
+     int numOfArchivesShouldBeUploadedToSharedCacheExpected,
+     boolean jobJarInSharedCacheBeforeUpload) throws Exception {
+    MyFileUploader fileUploader = new MyFileUploader(remoteFs, jobConf);
+    SharedCacheConfig sharedCacheConfig = new SharedCacheConfig();
+    sharedCacheConfig.init(jobConf);
+
+    Path firstFile = createTempFile("first-input-file", "x");
+    Path secondFile = createTempFile("second-input-file", "xx");
+
+    // Add files to job conf via distributed cache API as well as command line
+    boolean fileAdded = Job.addCacheFileShared(firstFile.toUri(), jobConf);
+    assertEquals(sharedCacheConfig.isSharedCacheFilesEnabled(), fileAdded);
+    if (!fileAdded) {
+      Path remoteFile = copyToRemote(firstFile);
+      job.addCacheFile(remoteFile.toUri());
+    }
+    jobConf.set("tmpfiles", secondFile.toString());
+
+    // Create jars with a single file inside them.
+    Path firstJar = makeJar(new Path(TEST_ROOT_DIR, "distributed.first.jar"), 1);
+    Path secondJar = makeJar(new Path(TEST_ROOT_DIR, "distributed.second.jar"), 2);
+
+    // Verify duplicated contents can be handled properly.
+    Path thirdJar = new Path(TEST_ROOT_DIR, "distributed.third.jar");
+    localFs.copyFromLocalFile(secondJar, thirdJar);
+
+    // make secondJar cache available
+    makeJarAvailableInSharedCache(secondJar, fileUploader);
+
+    // Add libjars to job conf via distributed cache API as well as command line
+    boolean libjarAdded =
+        Job.addFileToClassPathShared(firstJar.toUri(), jobConf);
+    assertEquals(sharedCacheConfig.isSharedCacheLibjarsEnabled(), libjarAdded);
+    if (!libjarAdded) {
+      Path remoteJar = copyToRemote(firstJar);
+      job.addFileToClassPath(remoteJar);
+    }
+
+    jobConf.set("tmpjars", secondJar.toString() + "," + thirdJar.toString());
+
+    Path firstArchive = makeArchive("first-archive.zip", "first-file");
+    Path secondArchive = makeArchive("second-archive.zip", "second-file");
+
+    // Add archives to job conf via distributed cache API as well as command line
+    boolean archiveAdded =
+        Job.addCacheArchiveToShared(firstArchive.toUri(), jobConf);
+    assertEquals(sharedCacheConfig.isSharedCacheArchivesEnabled(), archiveAdded);
+    if (!archiveAdded) {
+      Path remoteArchive = copyToRemote(firstArchive);
+      job.addCacheArchive(remoteArchive.toUri());
+    }
+
+    jobConf.set("tmparchives", secondArchive.toString());
+
+    // Add job jar to job conf
+    Path jobJar = makeJar(new Path(TEST_ROOT_DIR, "test-job.jar"), 4);
+    if (jobJarInSharedCacheBeforeUpload) {
+      makeJarAvailableInSharedCache(jobJar, fileUploader);
+    }
+    jobConf.setJar(jobJar.toString());
+
+    fileUploader.uploadFiles(job, remoteStagingDir);
+
+    verify(fileUploader.mockscClient, times(useCallCountExpected)).use(
+        any(ApplicationId.class), anyString());
+
+    int numOfFilesShouldBeUploadedToSharedCache = 0;
+    boolean[] filesSharedCacheUploadPolicies =
+        Job.getFilesSharedCacheUploadPolicies(jobConf);
+    int i = 0;
+    for (i=0; i<filesSharedCacheUploadPolicies.length; i++) {
+      if (filesSharedCacheUploadPolicies[i]) {
+        numOfFilesShouldBeUploadedToSharedCache++;
+      }
+    }
+    assertEquals(numOfFilesShouldBeUploadedToSharedCacheExpected,
+        numOfFilesShouldBeUploadedToSharedCache);
+
+    int numOfArchivesShouldBeUploadedToSharedCache = 0;
+    boolean[] archivesSharedCacheUploadPolicies =
+        Job.getArchivesSharedCacheUploadPolicies(jobConf);
+    for (i=0; i<archivesSharedCacheUploadPolicies.length; i++) {
+      if (archivesSharedCacheUploadPolicies[i]) {
+        numOfArchivesShouldBeUploadedToSharedCache++;
+      }
+    }
+    assertEquals(numOfArchivesShouldBeUploadedToSharedCacheExpected,
+        numOfArchivesShouldBeUploadedToSharedCache);
+
+    String[] checksums = jobConf.getStrings(
+        MRJobConfig.SHARED_CACHE_CHECKSUMS);
+    if (cachedFileCountExpected == 0) {
+      assertTrue(checksums == null);
+    } else {
+      assertTrue(checksums != null);
+      assertEquals(cachedFileCountExpected, checksums.length);
+    }
+
+    if (jobJarInSharedCacheBeforeUpload &&
+        sharedCacheConfig.isSharedCacheJobjarEnabled()) {
+      assertTrue(jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+          MRJobConfig.JOBJAR_VISIBILITY_DEFAULT));
+    } else {
+      assertFalse(jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+          MRJobConfig.JOBJAR_VISIBILITY_DEFAULT));
+    }
+
+    // Verify we have the correct LocalResources. The size of LocalResources
+    // will verify the scenario where two files with different names share the
+    // same checksum. localResources should have one entry for each file.
+    // It also checks if the upload polices are set properly for specific
+    // resources.
+    Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
+    MRApps.setupDistributedCache(jobConf, localResources);
+    for (Entry<String,LocalResource> localResource : localResources.entrySet() ) {
+      if (localResource.getKey().compareTo("distributed.first.jar") == 0 &&
+          numOfFilesShouldBeUploadedToSharedCacheExpected != 0) {
+        assertTrue(localResource.getValue().getShouldBeUploadedToSharedCache());
+      }
+    }
+    assertEquals(7, localResources.size());
+  }
+
+
+  private Path createTempFile(String filename, String contents)
+      throws IOException {
+    Path path = new Path(TEST_ROOT_DIR, filename);
+    FSDataOutputStream os = localFs.create(path);
+    os.writeBytes(contents);
+    os.close();
+    localFs.setPermission(path, new FsPermission("700"));
+    return path;
+  }
+
+  private Path makeJar(Path p, int index) throws FileNotFoundException,
+      IOException {
+    FileOutputStream fos =
+        new FileOutputStream(new File(p.toUri().getPath()));
+    JarOutputStream jos = new JarOutputStream(fos);
+    ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
+    jos.putNextEntry(ze);
+    jos.write(("inside the jar!" + index).getBytes());
+    jos.closeEntry();
+    jos.close();
+    localFs.setPermission(p, new FsPermission("700"));
+    return p;
+  }
+
+  private Path makeArchive(String archiveFile, String filename) throws Exception{
+    Path archive = new Path(TEST_ROOT_DIR, archiveFile);
+    Path file = new Path(TEST_ROOT_DIR, filename);
+    DataOutputStream out = localFs.create(archive);
+    ZipOutputStream zos = new ZipOutputStream(out);
+    ZipEntry ze = new ZipEntry(file.toString());
+    zos.putNextEntry(ze);
+    zos.write(input.getBytes("UTF-8"));
+    zos.closeEntry();
+    zos.close();
+    return archive;
+  }
+}

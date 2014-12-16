@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.SharedCacheConfig;
 
 import java.net.URI;
 
@@ -132,7 +133,7 @@ import java.net.URI;
 @Deprecated
 @InterfaceAudience.Private
 public class DistributedCache {
-  
+
   /**
    * Set the configuration with the given set of archives.  Intended
    * to be used by user code.
@@ -314,8 +315,9 @@ public class DistributedCache {
            (Path file, Configuration conf, FileSystem fs)
         throws IOException {
     String classpath = conf.get(MRJobConfig.CLASSPATH_FILES);
-    conf.set(MRJobConfig.CLASSPATH_FILES, classpath == null ? file.toString()
-             : classpath + "," + file.toString());
+    String fileForClassPath = getPathStringWithoutFragment(file);
+    conf.set(MRJobConfig.CLASSPATH_FILES, classpath == null ?
+        fileForClassPath : classpath + "," + fileForClassPath);
     URI uri = fs.makeQualified(file).toUri();
     addCacheFile(uri, conf);
   }
@@ -357,11 +359,12 @@ public class DistributedCache {
 
   /**
    * Add an archive path to the current set of classpath entries. It adds the
-   * archive to cache as well.  Intended to be used by user code.
-   *
+   * archive to cache as well. Intended to be used by user code.
+   * 
    * @param archive Path of the archive to be added
    * @param conf Configuration that contains the classpath setting
-   * @param fs FileSystem with respect to which {@code archive} should be interpreted.
+   * @param fs FileSystem with respect to which {@code archive} should be
+   *          interpreted.
    */
   public static void addArchiveToClassPath
          (Path archive, Configuration conf, FileSystem fs)
@@ -498,4 +501,12 @@ public class DistributedCache {
     return true;
   }
 
+  private static String getPathStringWithoutFragment(Path filePath) {
+    String fileName = filePath.toString();
+    int index = fileName.indexOf("#");
+    if (index != -1) {
+      fileName = fileName.substring(0, index);
+    }
+    return fileName;
+  }
 }

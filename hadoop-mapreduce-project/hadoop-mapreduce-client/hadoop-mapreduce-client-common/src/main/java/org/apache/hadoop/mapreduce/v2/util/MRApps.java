@@ -43,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskLog;
@@ -457,7 +458,8 @@ public class MRApps extends Apps {
         DistributedCache.getCacheArchives(conf), 
         DistributedCache.getArchiveTimestamps(conf),
         getFileSizes(conf, MRJobConfig.CACHE_ARCHIVES_SIZES), 
-        DistributedCache.getArchiveVisibilities(conf));
+        DistributedCache.getArchiveVisibilities(conf),
+        Job.getArchivesSharedCacheUploadPolicies(conf));
     
     // Cache files
     parseDistributedCacheArtifacts(conf, 
@@ -466,7 +468,8 @@ public class MRApps extends Apps {
         DistributedCache.getCacheFiles(conf),
         DistributedCache.getFileTimestamps(conf),
         getFileSizes(conf, MRJobConfig.CACHE_FILES_SIZES),
-        DistributedCache.getFileVisibilities(conf));
+        DistributedCache.getFileVisibilities(conf),
+        Job.getFilesSharedCacheUploadPolicies(conf));
   }
 
   /**
@@ -539,18 +542,23 @@ public class MRApps extends Apps {
       Configuration conf,
       Map<String, LocalResource> localResources,
       LocalResourceType type,
-      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[])
+      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[],
+      boolean sharedCacheUploadPolicies[])
   throws IOException {
 
     if (uris != null) {
       // Sanity check
-      if ((uris.length != timestamps.length) || (uris.length != sizes.length) ||
-          (uris.length != visibilities.length)) {
-        throw new IllegalArgumentException("Invalid specification for " +
-            "distributed-cache artifacts of type " + type + " :" +
-            " #uris=" + uris.length +
-            " #timestamps=" + timestamps.length +
-            " #visibilities=" + visibilities.length
+      // Check if sharedCacheUploadPolicies is null for backward compatibility,
+      // given older version of MR client won't set the value.
+      if ((uris.length != timestamps.length) || (uris.length != sizes.length)
+          || (uris.length != visibilities.length)
+          || (sharedCacheUploadPolicies != null
+          && uris.length != sharedCacheUploadPolicies.length)) {
+        throw new IllegalArgumentException("Invalid specification for "
+            + "distributed-cache artifacts of type " + type + " :" + " #uris="
+            + uris.length + " #timestamps=" + timestamps.length
+            + " #visibilities=" + visibilities.length
+            + " #sharedcacheuploadpolicies=" + sharedCacheUploadPolicies.length
             );
       }
       
@@ -576,9 +584,10 @@ public class MRApps extends Apps {
               " conflicts with " + getResourceDescription(type) + u);
         }
         localResources.put(linkName, LocalResource.newInstance(ConverterUtils
-          .getYarnUrlFromURI(p.toUri()), type, visibilities[i]
-            ? LocalResourceVisibility.PUBLIC : LocalResourceVisibility.PRIVATE,
-          sizes[i], timestamps[i]));
+            .getYarnUrlFromURI(p.toUri()), type,
+            visibilities[i] ? LocalResourceVisibility.PUBLIC
+                : LocalResourceVisibility.PRIVATE, sizes[i], timestamps[i],
+            sharedCacheUploadPolicies[i]));
       }
     }
   }

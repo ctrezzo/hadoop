@@ -130,6 +130,46 @@ public interface MRJobConfig {
 
   public static final String CACHE_ARCHIVES_VISIBILITIES = "mapreduce.job.cache.archives.visibilities";
 
+  public static final String JOBJAR_VISIBILITY =
+      "mapreduce.job.jobjar.visibility";
+  public static final boolean JOBJAR_VISIBILITY_DEFAULT = false;
+
+  public static final String JOBJAR_SHARED_CACHE_UPLOAD_POLICY =
+      "mapreduce.job.jobjar.sharedcache.uploadpolicy";
+  public static final boolean JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT = false;
+
+  public static final String CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES =
+      "mapreduce.job.cache.files.sharedcache.uploadpolicies";
+
+  public static final String CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES =
+      "mapreduce.job.cache.archives.sharedcache.uploadpolicies";
+
+  public static final String FILES_FOR_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.files";
+
+  public static final String FILES_FOR_CLASSPATH_AND_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.files.addtoclasspath";
+
+  public static final String ARCHIVES_FOR_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.archives";
+
+  // Job submitter will store checksums of those resources found in shared cache
+  // MRAppMaster will release them upon job completion.
+  public static final String SHARED_CACHE_CHECKSUMS =
+      "mapreduce.job.sharedcache.checksums";
+
+  public static final int SUBMIT_FILE_REPLICATION_DEFAULT = 10;
+
+  // A comma delimited list of resource categories to submit to the shared
+  // cache.
+  // The valid categories are: jobjar, libjars, files, archives.
+  // If "disabled" is specified then the job submission code will not use
+  // the shared cache.
+  public static final String SHARED_CACHE_MODE =
+      "mapreduce.job.sharedcache.mode";
+
+  public static final String SHARED_CACHE_MODE_DEFAULT = "disabled";
+
   /**
    * @deprecated Symlinks are always on and cannot be disabled.
    */

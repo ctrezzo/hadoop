@@ -307,8 +307,9 @@ public class YARNRunner implements ClientProtocol {
     }
   }
 
-  private LocalResource createApplicationResource(FileContext fs, Path p, LocalResourceType type)
-      throws IOException {
+  private LocalResource createApplicationResource(FileContext fs, Path p,
+      LocalResourceType type, boolean shouldBeUploadedToSharedCache,
+      boolean visibility) throws IOException {
     LocalResource rsrc = recordFactory.newRecordInstance(LocalResource.class);
     FileStatus rsrcStat = fs.getFileStatus(p);
     rsrc.setResource(ConverterUtils.getYarnUrlFromPath(fs
@@ -316,7 +317,9 @@ public class YARNRunner implements ClientProtocol {
     rsrc.setSize(rsrcStat.getLen());
     rsrc.setTimestamp(rsrcStat.getModificationTime());
     rsrc.setType(type);
-    rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc.setShouldBeUploadedToSharedCache(shouldBeUploadedToSharedCache);
+    rsrc.setVisibility(visibility ? LocalResourceVisibility.PUBLIC
+        : LocalResourceVisibility.APPLICATION);
     return rsrc;
   }
 
@@ -354,13 +357,18 @@ public class YARNRunner implements ClientProtocol {
 
     localResources.put(MRJobConfig.JOB_CONF_FILE,
         createApplicationResource(defaultFileContext,
-            jobConfPath, LocalResourceType.FILE));
+ jobConfPath,
+            LocalResourceType.FILE, false, false));
     if (jobConf.get(MRJobConfig.JAR) != null) {
       Path jobJarPath = new Path(jobConf.get(MRJobConfig.JAR));
-      LocalResource rc = createApplicationResource(
-          FileContext.getFileContext(jobJarPath.toUri(), jobConf),
-          jobJarPath,
-          LocalResourceType.PATTERN);
+      LocalResource rc =
+          createApplicationResource(FileContext.getFileContext(
+              jobJarPath.toUri(), jobConf), jobJarPath,
+              LocalResourceType.PATTERN, jobConf.getBoolean(
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY,
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT),
+              jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+                  MRJobConfig.JOBJAR_VISIBILITY_DEFAULT));
       String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN, 
           JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
       rc.setPattern(pattern);
@@ -378,8 +386,8 @@ public class YARNRunner implements ClientProtocol {
         MRJobConfig.JOB_SPLIT_METAINFO }) {
       localResources.put(
           MRJobConfig.JOB_SUBMIT_DIR + "/" + s,
-          createApplicationResource(defaultFileContext,
-              new Path(jobSubmitDir, s), LocalResourceType.FILE));
+          createApplicationResource(defaultFileContext, new Path(jobSubmitDir,
+              s), LocalResourceType.FILE, false, false));
     }
 
     // Setup security tokens

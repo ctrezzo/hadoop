@@ -1255,6 +1255,181 @@ public class Job extends JobContextImpl implements JobContext {
     }   
   }
 
+  /**
+   * Add a file to job config for shared cache processing. If shared cache is
+   * enabled, it will return true, otherwise, return false. We don't check with
+   * SCM here given application might not be able to provide the job id;
+   * ClientSCMProtocol.use requires the application id. Job Submitter will read
+   * the files from job config and take care of things. Intended to be used by
+   * user code.
+   * 
+   * @param resource The resource that Job Submitter will process later using
+   *          shared cache.
+   * @param conf Configuration to add the resource to
+   * @return whether the resource has been added to the configuration
+   */
+  public static boolean addCacheFileShared(URI resource, Configuration conf) {
+    SharedCacheConfig scConfig = new SharedCacheConfig();
+    scConfig.init(conf);
+    if (scConfig.isSharedCacheFilesEnabled()) {
+      String files = conf.get(MRJobConfig.FILES_FOR_SHARED_CACHE);
+      conf.set(
+          MRJobConfig.FILES_FOR_SHARED_CACHE,
+          files == null ? resource.toString() : files + ","
+              + resource.toString());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Add a file to job config for shared cache processing. If shared cache is
+   * enabled, it will return true, otherwise, return false. We don't check with
+   * SCM here given application might not be able to provide the job id;
+   * ClientSCMProtocol.use requires the application id. Job Submitter will read
+   * the files from job config and take care of things. Job Submitter will also
+   * add the file to classpath. Intended to be used by user code.
+   * 
+   * @param resource The resource that Job Submitter will process later using
+   *          shared cache.
+   * @param conf Configuration to add the resource to
+   * @return whether the resource has been added to the configuration
+   */
+  public static boolean addFileToClassPathShared(URI resource,
+      Configuration conf) {
+    SharedCacheConfig scConfig = new SharedCacheConfig();
+    scConfig.init(conf);
+    if (scConfig.isSharedCacheLibjarsEnabled()) {
+      String files = conf.get(MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE);
+      conf.set(
+          MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE,
+          files == null ? resource.toString() : files + ","
+              + resource.toString());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Add an archive to job config for shared cache processing. If shared cache
+   * is enabled, it will return true, otherwise, return false. We don't check
+   * with SCM here given application might not be able to provide the job id;
+   * ClientSCMProtocol.use requires the application id. Job Submitter will read
+   * the files from job config and take care of things. Intended to be used by
+   * user code.
+   * 
+   * @param resource The resource that Job Submitter will process later using
+   *          shared cache.
+   * @param conf Configuration to add the resource to
+   * @return whether the resource has been added to the configuration
+   */
+  public static boolean addCacheArchiveToShared(URI resource, Configuration conf) {
+    SharedCacheConfig scConfig = new SharedCacheConfig();
+    scConfig.init(conf);
+    if (scConfig.isSharedCacheArchivesEnabled()) {
+      String files = conf.get(MRJobConfig.ARCHIVES_FOR_SHARED_CACHE);
+      conf.set(
+          MRJobConfig.ARCHIVES_FOR_SHARED_CACHE,
+          files == null ? resource.toString() : files + ","
+              + resource.toString());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * It isn't supported.
+   * 
+   * @param resource The resource that Job Submitter will process later using
+   *          shared cache.
+   * @param conf Configuration to add the resource to
+   * @return whether the resource has been added to the configuration
+   */
+  public static boolean addArchiveToClassPathShared(URI resource,
+      Configuration conf) {
+    return false;
+  }
+
+  /**
+   * This is to set the shared cache upload policies for files
+   * 
+   * @param conf Configuration which stores the shared cache upload policies
+   * @param booleans comma separated list of booleans (true - upload) The order
+   *          should be the same as the order in which the files are added.
+   */
+  public static void setFilesSharedCacheUploadPolicies(Configuration conf,
+      boolean[] booleans) {
+    String policies = booleansToString(booleans);
+    if (policies != null) {
+      conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, policies);
+    }
+  }
+
+  /**
+   * This is to set the shared cache upload policies for archives
+   * 
+   * @param conf Configuration which stores the shared cache upload policies
+   * @param booleans comma separated list of booleans (true - upload) The order
+   *          should be the same as the order in which the archives are added.
+   */
+  public static void setArchivesSharedCacheUploadPolicies(Configuration conf,
+      boolean[] booleans) {
+    String policies = booleansToString(booleans);
+    if (policies != null) {
+      conf.set(MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES,
+          policies);
+    }
+  }
+
+  /**
+   * Get the booleans on whether the files should be uploaded to shared cache
+   * 
+   * @param conf The configuration which stored the shared cache upload policies
+   * @return a string array of booleans
+   */
+  public static boolean[] getFilesSharedCacheUploadPolicies(Configuration conf) {
+    return parseBooleans(conf
+        .getStrings(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES));
+  }
+
+  /**
+   * Get the booleans on whether the archives should be uploaded.
+   * 
+   * @param conf The configuration which stored the shared cache upload policies
+   * @return a string array of booleans
+   */
+  public static boolean[] getArchivesSharedCacheUploadPolicies(
+      Configuration conf) {
+    return parseBooleans(conf
+        .getStrings(MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES));
+  }
+
+  static private String booleansToString(boolean[] policies) {
+    if (policies == null || policies.length == 0) {
+      return null;
+    }
+    StringBuilder ret = new StringBuilder(String.valueOf(policies[0]));
+    for (int i = 1; i < policies.length; i++) {
+      ret.append(",");
+      ret.append(String.valueOf(policies[i]));
+    }
+    return ret.toString();
+  }
+
+  private static boolean[] parseBooleans(String[] strs) {
+    if (null == strs) {
+      return null;
+    }
+    boolean[] result = new boolean[strs.length];
+    for (int i = 0; i < strs.length; ++i) {
+      result[i] = Boolean.parseBoolean(strs[i]);
+    }
+    return result;
+  }
+
   private synchronized void connect()
           throws IOException, InterruptedException, ClassNotFoundException {
     if (cluster == null) {

@@ -26,6 +26,7 @@ import java.text.NumberFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 /**
  * JobID represents the immutable and unique identifier for 
@@ -157,4 +158,13 @@ public class JobID extends org.apache.hadoop.mapred.ID
         + " is not properly formed");
   }
   
+  public ApplicationId getAppId() {
+    return ApplicationId.newInstance(
+        toClusterTimeStamp(this.getJtIdentifier()), this.getId());
+  }
+
+  private static long toClusterTimeStamp(String identifier) {
+    return Long.parseLong(identifier);
+  }
+
 }

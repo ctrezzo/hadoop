@@ -595,6 +595,10 @@ public abstract class TaskAttemptImpl implements
 
   /**
    * Create a {@link LocalResource} record with all the given parameters.
+   * The NM that hosts AM container will upload resources to shared cache.
+   * Thus there is no need to ask task container's NM to upload the
+   * resources to shared cache. Set the shared cache upload policy to
+   * false.
    */
   private static LocalResource createLocalResource(FileSystem fc, Path file,
       LocalResourceType type, LocalResourceVisibility visibility)
@@ -606,7 +610,7 @@ public abstract class TaskAttemptImpl implements
     long resourceModificationTime = fstat.getModificationTime();
 
     return LocalResource.newInstance(resourceURL, type, visibility,
-      resourceSize, resourceModificationTime);
+        resourceSize, resourceModificationTime, false);
   }
 
   /**
@@ -661,8 +665,13 @@ public abstract class TaskAttemptImpl implements
         final FileSystem jobJarFs = FileSystem.get(jobJarPath.toUri(), conf);
         Path remoteJobJar = jobJarPath.makeQualified(jobJarFs.getUri(),
             jobJarFs.getWorkingDirectory());
+        boolean jobJarVisibility =
+            conf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+                MRJobConfig.JOBJAR_VISIBILITY_DEFAULT);
         LocalResource rc = createLocalResource(jobJarFs, remoteJobJar,
-            LocalResourceType.PATTERN, LocalResourceVisibility.APPLICATION);
+                LocalResourceType.PATTERN,
+                jobJarVisibility ? LocalResourceVisibility.PUBLIC
+                    : LocalResourceVisibility.APPLICATION);
         String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN, 
             JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
         rc.setPattern(pattern);
@@ -685,6 +694,9 @@ public abstract class TaskAttemptImpl implements
           new Path(path, oldJobId.toString());
       Path remoteJobConfPath = 
           new Path(remoteJobSubmitDir, MRJobConfig.JOB_CONF_FILE);
+      // There is no point to ask task container's NM to upload the resource
+      // to shared cache. createLocalResource will set the shared cache upload
+      // policy to false
       localResources.put(
           MRJobConfig.JOB_CONF_FILE,
           createLocalResource(remoteFS, remoteJobConfPath,

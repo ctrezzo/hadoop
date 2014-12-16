@@ -49,6 +49,8 @@ public class MRAppMetrics {
   @Metric MutableCounterInt reducesKilled;
   @Metric MutableGaugeInt reducesRunning;
   @Metric MutableGaugeInt reducesWaiting;
+  @Metric
+  MutableCounterInt sharedCacheResourcesReleased;
   
   public static MRAppMetrics create() {
     return create(DefaultMetricsSystem.instance());
@@ -179,5 +181,13 @@ public class MRAppMetrics {
         reducesWaiting.decr();
         break;
     }
+  }
+
+  public void releasedSharedCacheResources() {
+    sharedCacheResourcesReleased.incr();
+  }
+
+  public int getReleasedSharedCacheResources() {
+    return sharedCacheResourcesReleased.value();
   }
 }

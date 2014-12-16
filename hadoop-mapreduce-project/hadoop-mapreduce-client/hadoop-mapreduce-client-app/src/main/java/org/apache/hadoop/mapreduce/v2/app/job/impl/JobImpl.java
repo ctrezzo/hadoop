@@ -50,6 +50,7 @@ import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -123,6 +124,7 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.sharedcache.SharedCacheClient;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -1112,6 +1114,32 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     return getInternalState();
   }
 
+  private void cleanupSharedCacheResources() {
+    String[] checksums = conf.getStrings(MRJobConfig.SHARED_CACHE_CHECKSUMS);
+    if (checksums != null && checksums.length != 0) {
+      SharedCacheClient scClient = null;
+      try {
+        scClient = new SharedCacheClient();
+        scClient.init(conf);
+        scClient.start();
+        for (String checksum : checksums) {
+          scClient.release(this.applicationAttemptId.getApplicationId(),
+              checksum);
+          metrics.releasedSharedCacheResources();
+        }
+      } finally {
+        if (scClient != null) {
+          try {
+            scClient.close();
+          } catch (IOException e) {
+            LOG.warn("IOException thrown during shared cache client shutdown.",
+                e);
+          }
+        }
+      }
+    }
+  }
+
   JobStateInternal finished(JobStateInternal finalState) {
     if (getInternalState() == JobStateInternal.RUNNING) {
       metrics.endRunningJob(this);
@@ -1130,6 +1158,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         break;
       case SUCCEEDED:
         metrics.completedJob(this);
+      // Clean up shared cache resources only for SUCCEEDED scenario
+      cleanupSharedCacheResources();
         break;
       default:
         throw new IllegalArgumentException("Illegal job state: " + finalState);
@@ -1387,6 +1417,28 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         new char[] {'"', '=', '.'});
   }
 
+  // The goal is to make sure only the NM that hosts MRAppMaster will
+  // upload resources to shared cache.
+  // Clean up the shared cache policies for all resources so that
+  // later when TaskAttemptImpl creates ContainerLaunchContext,
+  // LocalResource.setShouldBeUploadedToSharedCache will be set up to false.
+  // In that way, the NMs that host the task containers won't try to
+  // upload the resources to shared cache.
+  private static void cleanupSharedCacheUploadPolicies(Configuration conf) {
+    boolean[] archivesPolicies = Job.getArchivesSharedCacheUploadPolicies(conf);
+    if (archivesPolicies != null) {
+      boolean[] falseArchivesPolicies = new boolean[archivesPolicies.length];
+      Job.setArchivesSharedCacheUploadPolicies(conf,
+          falseArchivesPolicies);
+    }
+    boolean[] filesPolicies = Job.getFilesSharedCacheUploadPolicies(conf);
+    if (filesPolicies != null) {
+      boolean[] falseFilesPolicies = new boolean[filesPolicies.length];
+      Job.setFilesSharedCacheUploadPolicies(conf,
+          falseFilesPolicies);
+    }
+  }
+
   public static class InitTransition 
       implements MultipleArcTransition<JobImpl, JobEvent, JobStateInternal> {
 
@@ -1464,6 +1516,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             job.conf.getInt(MRJobConfig.MAP_FAILURES_MAX_PERCENT, 0);
         job.allowedReduceFailuresPercent =
             job.conf.getInt(MRJobConfig.REDUCE_FAILURES_MAXPERCENT, 0);
+
+        cleanupSharedCacheUploadPolicies(job.conf);
 
         // create the Tasks but don't start them yet
         createMapTasks(job, inputLength, taskSplitMetaInfo);
