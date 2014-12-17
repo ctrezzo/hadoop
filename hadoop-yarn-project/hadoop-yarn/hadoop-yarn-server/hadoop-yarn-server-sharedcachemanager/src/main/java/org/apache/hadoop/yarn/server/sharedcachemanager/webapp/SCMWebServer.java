@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.sharedcachemanager.webapp;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -30,7 +32,10 @@ import org.apache.hadoop.yarn.webapp.WebApps;
 /**
  * A very simple web interface for the metrics reported by
  * {@link org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager}
+ * TODO: Security for web ui (See YARN-2774)
  */
+@Private
+@Unstable
 public class SCMWebServer extends AbstractService {
   private static final Log LOG = LogFactory.getLog(SCMWebServer.class);
 

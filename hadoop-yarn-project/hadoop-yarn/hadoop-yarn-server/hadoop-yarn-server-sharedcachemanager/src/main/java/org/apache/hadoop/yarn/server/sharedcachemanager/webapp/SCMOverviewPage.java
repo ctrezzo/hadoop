@@ -22,6 +22,8 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.server.sharedcachemanager.SharedCacheManager;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.CleanerMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.ClientSCMMetrics;
@@ -37,6 +39,8 @@ import com.google.inject.Inject;
 /**
  * This class is to render the shared cache manager web ui overview page.
  */
+@Private
+@Unstable
 public class SCMOverviewPage extends TwoColumnLayout {
 
   @Override protected void preHead(Page.HTML<_> html) {
