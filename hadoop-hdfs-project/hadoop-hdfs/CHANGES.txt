@@ -453,6 +453,15 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7463. Simplify FSNamesystem#getBlockLocationsUpdateTimes. (wheat9)
 
+    HDFS-7509. Avoid resolving path multiple times. (jing9)
+
+    HDFS-7426. Change nntop JMX format to be a JSON blob. (wang)
+
+    HDFS-7513. HDFS inotify: add defaultBlockSize to CreateEvent (cmccabe)
+
+    HDFS-7536. Remove unused CryptoCodec in org.apache.hadoop.fs.Hdfs.
+    (Yi Liu via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
@@ -581,6 +590,19 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7517. Remove redundant non-null checks in FSNamesystem#
     getBlockLocations. (wheat9)
+
+    HDFS-7514. TestTextCommand fails on Windows. (Arpit Agarwal)
+
+    HDFS-7506. Consolidate implementation of setting inode attributes into a
+    single class. (wheat9)
+    
+    HDFS-7516. Fix findbugs warnings in hdfs-nfs project. (brandonli)
+
+    HDFS-6425. Large postponedMisreplicatedBlocks has impact on blockReport
+    latency. (Ming Ma via kihwal)
+
+    HDFS-7494. Checking of closed in DFSInputStream#pread() should be protected
+    by synchronization (Ted Yu via Colin P. McCabe)
 
 Release 2.6.1 - UNRELEASED
 

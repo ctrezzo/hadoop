@@ -367,6 +367,10 @@ Trunk (Unreleased)
     HADOOP-11296. hadoop-daemons.sh throws 'host1: bash: host3: 
     command not found...' (vinayakumarb)
 
+    HADOOP-11380. Restore Rack Awareness documenation (aw)
+
+    HADOOP-11397. Can't override HADOOP_IDENT_STRING (Kengo Seki via aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -432,10 +436,17 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10476) Bumping the findbugs version to 3.0.0. (wheat9)
 
+    HADOOP-11410. Make the rpath of libhadoop.so configurable (cmccabe)
+
+    HADOOP-11416. Move ChunkedArrayList into hadoop-common (cmccabe)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
     (Wilfred Spiegelenburg via wang)
+
+    HADOOP-11238. Update the NameNode's Group Cache in the background when
+    possible (Chris Li via Colin P. McCabe)
 
   BUG FIXES
 
@@ -577,7 +588,18 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11389. Clean up byte to string encoding issues in hadoop-common.
     (wheat9)
-    
+
+    HADOOP-11394. hadoop-aws documentation missing. (cnauroth)
+
+    HADOOP-11396. Provide navigation in the site documentation linking to the
+    Hadoop Compatible File Systems. (cnauroth)
+
+    HADOOP-11412 POMs mention "The Apache Software License" rather than
+    "Apache License". (Herve Boutemy via stevel)
+
+    HADOOP-11321. copyToLocal cannot save a file to an SMB share unless the user
+    has Full Control permissions. (cnauroth)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
