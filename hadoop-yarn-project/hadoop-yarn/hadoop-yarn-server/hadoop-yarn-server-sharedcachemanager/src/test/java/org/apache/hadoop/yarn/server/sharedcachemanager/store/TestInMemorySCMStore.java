@@ -45,7 +45,6 @@ import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.sharedcachemanager.AppChecker;
 import org.apache.hadoop.yarn.server.sharedcachemanager.DummyAppChecker;
@@ -71,8 +70,7 @@ public class TestInMemorySCMStore extends BaseSCMStoreTest {
 
   @After
   public void cleanup() {
-    if (this.store != null && this.store.getServiceState() == STATE.STARTED) {
-      // only stop if the store has been started
+    if (this.store != null) {
       this.store.stop();
     }
   }
