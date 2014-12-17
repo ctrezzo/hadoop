@@ -52,10 +52,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestInMemorySCMStore {
+public class TestInMemorySCMStore extends SCMStoreBaseTest {
 
   private InMemorySCMStore store;
   private AppChecker checker;
+
+  @Override
+  Class<? extends SCMStore> getStoreClass() {
+    return InMemorySCMStore.class;
+  }
 
   @Before
   public void setup() {
