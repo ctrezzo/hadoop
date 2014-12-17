@@ -67,6 +67,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-2950. Change message to mandate, not suggest JS requirement on UI.
+    (Dustin Cote via harsh)
+
     YARN-2891. Failed Container Executor does not provide a clear error
     message. (Dustin Cote via harsh)
 
@@ -130,6 +133,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2056. Disable preemption at Queue level (Eric Payne via jlowe)
 
+    YARN-2762. Fixed RMAdminCLI to trim and check node-label related arguments
+    before sending to RM. (Rohith Sharmaks via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -184,9 +190,6 @@ Release 2.7.0 - UNRELEASED
     YARN-2905. AggregatedLogsBlock page can infinitely loop if the aggregated
     log file is corrupted (Varun Saxena via jlowe)
 
-    YARN-2890. MiniYARNCluster should start the timeline server based on the
-    configuration. (Mit Desai via zjshen)
-
     YARN-2894. Fixed a bug regarding application view acl when RM fails over.
     (Rohith Sharmaks via jianhe)
 
@@ -221,6 +224,12 @@ Release 2.7.0 - UNRELEASED
     SchedulerApplicationAttempt ctor. (devaraj)
 
     YARN-2912 Jersey Tests failing with port in use. (varun saxena via stevel)
+
+    YARN-2356. yarn status command for non-existent application/application 
+    attempt/container is too verbose. (Sunil G via devaraj)
+
+    YARN-2914. [YARN-1492] Potential race condition in Singleton implementation of 
+    SharedCacheUploaderMetrics, CleanerMetrics, ClientSCMMetrics. (Varun Saxena via kasha)
 
 Release 2.6.0 - 2014-11-18
 
