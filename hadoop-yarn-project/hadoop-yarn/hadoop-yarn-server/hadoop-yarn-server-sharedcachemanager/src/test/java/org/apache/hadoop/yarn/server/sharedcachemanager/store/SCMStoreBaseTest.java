@@ -25,7 +25,7 @@ import org.junit.Test;
 /**
  * All test classes that test an SCMStore implementation must extend this class.
  */
-public abstract class BaseSCMStoreTest {
+public abstract class SCMStoreBaseTest {
 
   /**
    * Get the SCMStore implementation class associated with this test class.

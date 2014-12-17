@@ -52,7 +52,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestInMemorySCMStore extends BaseSCMStoreTest {
+public class TestInMemorySCMStore extends SCMStoreBaseTest {
 
   private InMemorySCMStore store;
   private AppChecker checker;
