@@ -170,10 +170,9 @@ public class SharedCacheClient extends AbstractService {
 
 
   /**
-   * Calculates the SHA-256 checksum for a given file and verifies the file
-   * length.
+   * Calculates the checksum for a given file and verifies the file length.
    * 
-   * @return A hex string containing the SHA-256 digest
+   * @return A hex string containing the checksum digest
    * @throws IOException
    */
   public String getFileChecksum(Path sourceFile)
