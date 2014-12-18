@@ -115,7 +115,6 @@ public class SharedCacheClient extends AbstractService {
   @Public
   public Path use(ApplicationId applicationId, Path sourceFile)
     throws IOException {
-
     // If for whatever reason, we can't even calculate checksum for
     // local resource, something is really wrong with the file system;
     // even non-SCM approach won't work. Let us just throw the exception.
@@ -125,7 +124,6 @@ public class SharedCacheClient extends AbstractService {
 
   @Public
   public Path use(ApplicationId applicationId, String resourceKey) {
-
     Path resourcePath = null;
     UseSharedCacheResourceRequest request = Records.newRecord(
         UseSharedCacheResourceRequest.class);
@@ -175,6 +173,7 @@ public class SharedCacheClient extends AbstractService {
    * @return A hex string containing the checksum digest
    * @throws IOException
    */
+  @Public
   public String getFileChecksum(Path sourceFile)
       throws IOException {
     FileSystem fs = sourceFile.getFileSystem(this.conf);
