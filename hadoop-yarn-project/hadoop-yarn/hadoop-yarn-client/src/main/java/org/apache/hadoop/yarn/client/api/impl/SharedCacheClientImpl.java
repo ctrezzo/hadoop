@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * This is the client for YARN's shared cache.
+ * An implementation of the SharedCacheClient API.
  */
 @Private
 @Unstable
@@ -65,12 +65,7 @@ public class SharedCacheClientImpl extends SharedCacheClient {
   private volatile boolean scmAvailable = false;
 
   public SharedCacheClientImpl() {
-    this(null);
-  }
-
-  public SharedCacheClientImpl(InetSocketAddress scmAddress) {
     super(SharedCacheClientImpl.class.getName());
-    this.scmAddress = scmAddress;
   }
 
   private static InetSocketAddress getScmAddress(Configuration conf) {
@@ -112,16 +107,6 @@ public class SharedCacheClientImpl extends SharedCacheClient {
 
   public boolean isScmAvailable() {
     return this.scmAvailable;
-  }
-
-  @Override
-  public Path use(ApplicationId applicationId, Path sourceFile)
-    throws IOException {
-    // If for whatever reason, we can't even calculate checksum for
-    // local resource, something is really wrong with the file system;
-    // even non-SCM approach won't work. Let us just throw the exception.
-    String checksum = getFileChecksum(sourceFile);
-    return use(applicationId, checksum);
   }
 
   @Override

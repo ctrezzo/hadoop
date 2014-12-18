@@ -48,46 +48,54 @@ public abstract class SharedCacheClient extends AbstractService {
   }
 
   /**
+   * <p>
    * The method to claim a resource with the <code>SharedCacheManager.</code>
    * The client uses a checksum to identify the resource and an
    * {@link ApplicationId} to identify which application will be using the
-   * resource. </p>
+   * resource.
+   * </p>
    * 
    * <p>
    * The <code>SharedCacheManager</code> responds with whether or not the
    * resource exists in the cache. If the resource exists, a <code>Path</code>
    * to the resource in the shared cache is returned. If the resource does not
-   * exist, the response is empty.
+   * exist, null is returned instead.
+   * </p>
    * 
-   * @param applicationId
-   * @param sourceFile
-   * @return
-   * @throws IOException
+   * @param applicationId ApplicationId of the application using the resource
+   * @param resourceKey the key (i.e. checksum) that identifies the resource
+   * @return Path to the resource, or null if it does not exist
    */
-  @Public
-  @Unstable
-  public abstract Path use(ApplicationId applicationId, Path sourceFile)
-      throws IOException;
-
   @Public
   @Unstable
   public abstract Path use(ApplicationId applicationId, String resourceKey);
 
+  /**
+   * <p>
+   * The method to release a resource with the <code>SharedCacheManager.</code>
+   * This method is called once an application is no longer using a claimed
+   * resource in the shared cache. The client uses a checksum to identify the
+   * resource and an {@link ApplicationId} to identify which application is
+   * releasing the resource.
+   * </p>
+   * 
+   * <p>
+   * Note: This method is an optimization and the client is not required to call
+   * it for correctness.
+   * </p>
+   * 
+   * @param applicationId ApplicationId of the application releasing the
+   *          resource
+   * @param resourceKey the key (i.e. checksum) that identifies the resource
+   */
   @Public
   @Unstable
   public abstract void release(ApplicationId applicationId, String resourceKey);
 
   /**
-   * Calculates the checksum for a given path.
+   * A convenience method to calculate the checksum of a specified file.
    * 
-   * @return A hex string containing the checksum digest
-   * @throws IOException
-   */
-
-  /**
-   * Calculates the checksum for a given path.
-   * 
-   * @param sourceFile A path to a checksumable file
+   * @param sourceFile A path to the input file
    * @return A hex string containing the checksum digest
    * @throws IOException
    */
