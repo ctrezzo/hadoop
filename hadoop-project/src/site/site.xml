@@ -38,7 +38,7 @@
   <body>
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/hadoop" />
-      <item name="SVN" href="https://svn.apache.org/repos/asf/hadoop/" />
+      <item name="git" href="https://git-wip-us.apache.org/repos/asf/hadoop.git" />
     </links>
 
     <breadcrumbs position="left">
@@ -125,6 +125,7 @@
       <item name="Scheduler Load Simulator" href="hadoop-sls/SchedulerLoadSimulator.html"/>
       <item name="NodeManager Restart" href="hadoop-yarn/hadoop-yarn-site/NodeManagerRestart.html"/>
       <item name="DockerContainerExecutor" href="hadoop-yarn/hadoop-yarn-site/DockerContainerExecutor.html"/>
+      <item name="Using CGroups" href="hadoop-yarn/hadoop-yarn-site/NodeManagerCGroups.html"/>
     </menu>
 
     <menu name="YARN REST APIs" inherit="top">

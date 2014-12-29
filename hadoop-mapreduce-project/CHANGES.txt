@@ -94,6 +94,9 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    MAPREDUCE-6191. Improve clearing stale state of Java serialization
+                    testcase.  (Sam Liu via Eric Yang)
+
     MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
                      (Jinghui Wang via Eric Yang)
 
@@ -278,6 +281,9 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-4879. TeraOutputFormat may overwrite an existing output
     directory. (gera)
+
+    MAPREDUCE-6166. Reducers do not validate checksum of map outputs when
+    fetching directly to disk. (Eric Payne via gera)
 
 Release 2.6.0 - 2014-11-18
 

@@ -15,16 +15,6 @@ Trunk (Unreleased)
 
   NEW FEATURES
 
-    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
-    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
-    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
-    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
-
-    HADOOP-10728. Metrics system for Windows Azure Storage Filesystem.
-    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
-    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
-    Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
-
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
 
     HADOOP-11353. Add support for .hadooprc (aw)
@@ -132,12 +122,6 @@ Trunk (Unreleased)
 
     HADOOP-11092. hadoop shell commands should print usage if not given a
     a class (aw)
-
-    HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
-    Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
-
-    HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
-    full. (Eric Hanson via cnauroth)
 
     HADOOP-11231. Remove dead code in ServletUtil. (Li Lu via wheat9)
 
@@ -328,19 +312,9 @@ Trunk (Unreleased)
     HADOOP-10625. Trim configuration names when putting/getting them
     to properties. (Wangda Tan via xgong)
 
-    HADOOP-10689. InputStream is not closed in
-    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
-
-    HADOOP-10690. Lack of synchronization on access to InputStream in
-    NativeAzureFileSystem#NativeAzureFsInputStream#close().
-    (Chen He via cnauroth)
-
     HADOOP-10831. UserProvider is not thread safe. (Benoy Antony via umamahesh)
 
     HADOOP-10834. Typo in CredentialShell usage. (Benoy Antony via umamahesh)
-
-    HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
-    System. (Shanyu Zhao via cnauroth)
 
     HADOOP-11002. shell escapes are incompatible with previous releases (aw)
 
@@ -356,9 +330,6 @@ Trunk (Unreleased)
     HADOOP-11022. User replaced functions get lost 2-3 levels deep (e.g., 
     sbin) (aw)
 
-    HADOOP-11248. Add hadoop configuration to disable Azure Filesystem metrics
-    collection. (Shanyu Zhao via cnauroth)
-
     HADOOP-11284. Fix variable name mismatches in hadoop-functions.sh (Masatake
     Iwasaki via aw)
 
@@ -368,6 +339,8 @@ Trunk (Unreleased)
     command not found...' (vinayakumarb)
 
     HADOOP-11380. Restore Rack Awareness documenation (aw)
+
+    HADOOP-11397. Can't override HADOOP_IDENT_STRING (Kengo Seki via aw)
 
   OPTIMIZATIONS
 
@@ -387,6 +360,16 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-7984. Add hadoop --loglevel option to change log level.
     (Akira AJISAKA via cnauroth)
+
+    HADOOP-9629. Support Windows Azure Storage - Blob as a file system in Hadoop.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovic, Brian Swan, and Min Wei via cnauroth)
+
+    HADOOP-10728. Metrics system for Windows Azure Storage Filesystem.
+    (Dexter Bradshaw, Mostafa Elhemali, Xi Fang, Johannes Klein, David Lao,
+    Mike Liddell, Chuan Liu, Lengning Liu, Ivan Mitic, Michael Rys,
+    Alexander Stojanovich, Brian Swan, and Min Wei via cnauroth)
 
     HADOOP-8989. hadoop fs -find feature (Jonathan Allen via aw)
 
@@ -434,6 +417,21 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-10476) Bumping the findbugs version to 3.0.0. (wheat9)
 
+    HADOOP-11410. Make the rpath of libhadoop.so configurable (cmccabe)
+
+    HADOOP-11416. Move ChunkedArrayList into hadoop-common (cmccabe)
+
+    HADOOP-10840. Fix OutOfMemoryError caused by metrics system in Azure File
+    System. (Shanyu Zhao via cnauroth)
+
+    HADOOP-11248. Add hadoop configuration to disable Azure Filesystem metrics
+    collection. (Shanyu Zhao via cnauroth)
+
+    HADOOP-11421. Add IOUtils#listDirectory (cmccabe)
+
+    HADOOP-11427. ChunkedArrayList: fix removal via iterator and implement get
+    (cmccabe)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
@@ -441,6 +439,12 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11238. Update the NameNode's Group Cache in the background when
     possible (Chris Li via Colin P. McCabe)
+
+    HADOOP-10809. hadoop-azure: page blob support. (Dexter Bradshaw,
+    Mostafa Elhemali, Eric Hanson, and Mike Liddell via cnauroth)
+
+    HADOOP-11188. hadoop-azure: automatically expand page blobs when they become
+    full. (Eric Hanson via cnauroth)
 
   BUG FIXES
 
@@ -587,7 +591,38 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11396. Provide navigation in the site documentation linking to the
     Hadoop Compatible File Systems. (cnauroth)
-    
+
+    HADOOP-11412 POMs mention "The Apache Software License" rather than
+    "Apache License". (Herve Boutemy via stevel)
+
+    HADOOP-11321. copyToLocal cannot save a file to an SMB share unless the user
+    has Full Control permissions. (cnauroth)
+
+    HADOOP-11420. Use latest maven-site-plugin and replace link to svn with
+    link to git. (Herve Boutemy via wheat9)
+
+    HADOOP-10689. InputStream is not closed in
+    AzureNativeFileSystemStore#retrieve(). (Chen He via cnauroth)
+
+    HADOOP-10690. Lack of synchronization on access to InputStream in
+    NativeAzureFileSystem#NativeAzureFsInputStream#close().
+    (Chen He via cnauroth)
+
+    HADOOP-11358. Tests for encryption/decryption with IV calculation
+    overflow. (yliu)
+
+    HADOOP-11125. Remove redundant tests in TestOsSecureRandom.
+    (Masanori Oyama via wheat9)
+
+    HADOOP-11385. Prevent cross site scripting attack on JMXJSONServlet.
+    (wheat9)
+
+    HADOOP-11409. FileContext.getFileContext can stack overflow if default fs
+    misconfigured (Gera Shegalov via jlowe)
+
+    HADOOP-11428. Remove obsolete reference to Cygwin in BUILDING.txt.
+    (Arpit Agarwal via wheat9)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.sharedcache;
+package org.apache.hadoop.yarn.client.api.impl;
 
 
 import java.io.IOException;
@@ -24,31 +24,33 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ClientSCMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ReleaseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksum;
+import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * This is the client for YARN's shared cache.
+ * An implementation of the SharedCacheClient API.
  */
-@Public
+@Private
 @Unstable
-public class SharedCacheClient extends AbstractService {
+public class SharedCacheClientImpl extends SharedCacheClient {
   private static final Log LOG = LogFactory
-      .getLog(SharedCacheClient.class);
+      .getLog(SharedCacheClientImpl.class);
 
   private ClientSCMProtocol scmClient;
   private InetSocketAddress scmAddress;
@@ -62,13 +64,8 @@ public class SharedCacheClient extends AbstractService {
   // the caller to quickly fall back to the non-SCM approach.
   private volatile boolean scmAvailable = false;
 
-  public SharedCacheClient() {
-    this(null);
-  }
-
-  public SharedCacheClient(InetSocketAddress scmAddress) {
-    super(SharedCacheClient.class.getName());
-    this.scmAddress = scmAddress;
+  public SharedCacheClientImpl() {
+    super(SharedCacheClientImpl.class.getName());
   }
 
   private static InetSocketAddress getScmAddress(Configuration conf) {
@@ -112,20 +109,8 @@ public class SharedCacheClient extends AbstractService {
     return this.scmAvailable;
   }
 
-  @Public
-  public Path use(ApplicationId applicationId, Path sourceFile)
-    throws IOException {
-
-    // If for whatever reason, we can't even calculate checksum for
-    // local resource, something is really wrong with the file system;
-    // even non-SCM approach won't work. Let us just throw the exception.
-    String checksum = getFileChecksum(sourceFile);
-    return use(applicationId, checksum);
-  }
-
-  @Public
+  @Override
   public Path use(ApplicationId applicationId, String resourceKey) {
-
     Path resourcePath = null;
     UseSharedCacheResourceRequest request = Records.newRecord(
         UseSharedCacheResourceRequest.class);
@@ -147,7 +132,7 @@ public class SharedCacheClient extends AbstractService {
     return resourcePath;
   }
 
-  @Public
+  @Override
   public void release(ApplicationId applicationId, String resourceKey) {
     if (!scmAvailable) {
       return;
@@ -168,14 +153,7 @@ public class SharedCacheClient extends AbstractService {
     }
   }
 
-
-  /**
-   * Calculates the SHA-256 checksum for a given file and verifies the file
-   * length.
-   * 
-   * @return A hex string containing the SHA-256 digest
-   * @throws IOException
-   */
+  @Override
   public String getFileChecksum(Path sourceFile)
       throws IOException {
     FileSystem fs = sourceFile.getFileSystem(this.conf);
