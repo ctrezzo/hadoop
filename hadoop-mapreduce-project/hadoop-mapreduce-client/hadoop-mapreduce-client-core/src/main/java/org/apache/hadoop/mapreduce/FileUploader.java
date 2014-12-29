@@ -36,8 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.sharedcache.SharedCacheClient;
+import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -69,7 +70,7 @@ class FileUploader {
   // make it protected so that test code can overload the method
   // to provide test or mock SharedCacheClient
   protected SharedCacheClient createSharedCacheClient(Configuration conf) {
-    SharedCacheClient scClient = new SharedCacheClient();
+    SharedCacheClient scClient = SharedCacheClient.createSharedCacheClient();
     scClient.init(conf);
     scClient.start();
     return scClient;
@@ -177,261 +178,275 @@ class FileUploader {
                "with ToolRunner to remedy this.");
     }
 
-    initSharedCache(job.getJobID(), conf);
+    try {
+      initSharedCache(job.getJobID(), conf);
 
-    // get all the command line arguments passed in by the user conf
-    // as well as DistributedCache APIs
-    String files = getFiles(
-        conf, "tmpfiles", MRJobConfig.FILES_FOR_SHARED_CACHE);
-    String libjars = getFiles(
-        conf, "tmpjars", MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE);
-    String archives = getFiles(conf, "tmparchives",
-        MRJobConfig.ARCHIVES_FOR_SHARED_CACHE);
-    String jobJar = job.getJar();
+      // get all the command line arguments passed in by the user conf
+      // as well as DistributedCache APIs
+      String files =
+          getFiles(conf, "tmpfiles", MRJobConfig.FILES_FOR_SHARED_CACHE);
+      String libjars =
+          getFiles(conf, "tmpjars",
+              MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE);
+      String archives =
+          getFiles(conf, "tmparchives", MRJobConfig.ARCHIVES_FOR_SHARED_CACHE);
+      String jobJar = job.getJar();
 
-    //
-    // Figure out what fs the JobTracker is using.  Copy the
-    // job to it, under a temporary name.  This allows DFS to work,
-    // and under the local fs also provides UNIX-like object loading 
-    // semantics.  (that is, if the job file is deleted right after
-    // submission, we can still run the submission to completion)
-    //
+      //
+      // Figure out what fs the JobTracker is using. Copy the
+      // job to it, under a temporary name. This allows DFS to work,
+      // and under the local fs also provides UNIX-like object loading
+      // semantics. (that is, if the job file is deleted right after
+      // submission, we can still run the submission to completion)
+      //
 
-    // Create a number of filenames in the JobTracker's fs namespace
-    LOG.debug("default FileSystem: " + jtFs.getUri());
-    if (jtFs.exists(submitJobDir)) {
-      throw new IOException("Not submitting job. Job directory " + submitJobDir
-          +" already exists!! This is unexpected.Please check what's there in" +
-          " that directory");
-    }
-
-    submitJobDir = jtFs.makeQualified(submitJobDir);
-    submitJobDir = new Path(submitJobDir.toUri().getPath());
-    FsPermission mapredSysPerms = new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
-    FileSystem.mkdirs(jtFs, submitJobDir, mapredSysPerms);
-    Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
-    Path archivesDir = JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
-    // add all the command line files/ jars and archive
-    // first copy them to jobtrackers filesystem 
-
-    // We need to account for the distributed cache files applications specify via
-    // Job or Distributed Cache APIs such as addCacheFile. These files are already in HDFS.
-    // We don't ask YARN to upload those files to shared cache.
-    int numOfFilesSCUploadPolicies =
-        job.getCacheFiles() != null ? job.getCacheFiles().length : 0;
-    int indexOfFilesSCUploadPolicies = numOfFilesSCUploadPolicies;
-    int numOfArchivesSCUploadPolicies =
-        job.getCacheArchives() != null ? job.getCacheArchives().length : 0;
-    int indexOfArchivesSCUploadPolicies = numOfArchivesSCUploadPolicies;
-
-    String[] fileArr = null;
-    if (files != null) {
-      FileSystem.mkdirs(jtFs, filesDir, mapredSysPerms);
-      fileArr = files.split(",");
-      numOfFilesSCUploadPolicies += fileArr.length;
-    }
-
-    String[] libjarsArr = null;
-    if (libjars != null) {
-      libjarsArr = libjars.split(",");
-      numOfFilesSCUploadPolicies += libjarsArr.length;
-    }
-
-    String[] archivesArr = null;
-    if (archives != null) {
-      FileSystem.mkdirs(jtFs, archivesDir, mapredSysPerms);
-      archivesArr = archives.split(",");
-      numOfArchivesSCUploadPolicies += archivesArr.length;
-    }
-
-    boolean[] filesSCUploadPolicies = new boolean[numOfFilesSCUploadPolicies];
-    boolean[] archivesSCUploadPolicies = new boolean[numOfArchivesSCUploadPolicies];
-
-    if (files != null) {
-      for (String tmpFile: fileArr) {
-        URI tmpURI = null;
-        try {
-          tmpURI = new URI(tmpFile);
-        } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
-        }
-        Path tmp = new Path(tmpURI);
-        Path newPath = null;
-        if (isSharedCacheFilesEnabled()) {
-          newPath = useSharedCache(tmp, conf, true);
-        }
-
-        // need to inform NM to upload the file to shared cache.
-        if (newPath == null && isSharedCacheFilesEnabled()) {
-          filesSCUploadPolicies[indexOfFilesSCUploadPolicies] = true;
-        }
-        indexOfFilesSCUploadPolicies++;
-
-        if (newPath == null) {
-          newPath = copyRemoteFiles(filesDir, tmp, conf, replication);
-        }
-        try {
-          URI pathURI = getPathURI(newPath, tmpURI.getFragment());
-          job.addCacheFile(pathURI);
-        } catch(URISyntaxException ue) {
-          //should not throw a uri exception 
-          throw new IOException("Failed to create uri for " + tmpFile, ue);
-        }
+      // Create a number of filenames in the JobTracker's fs namespace
+      LOG.debug("default FileSystem: " + jtFs.getUri());
+      if (jtFs.exists(submitJobDir)) {
+        throw new IOException(
+            "Not submitting job. Job directory "
+                + submitJobDir
+                + " already exists!! This is unexpected.Please check what's there in"
+                + " that directory");
       }
-    }
 
-    if (libjars != null) {
-      for (String tmpjars: libjarsArr) {
-        Path tmp = new Path(tmpjars);
-        Path newPath = null;
-        if (isSharedCacheLibjarsEnabled()) {
-          newPath = useSharedCache(tmp, conf, true);
-        }
+      submitJobDir = jtFs.makeQualified(submitJobDir);
+      submitJobDir = new Path(submitJobDir.toUri().getPath());
+      FsPermission mapredSysPerms =
+          new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
+      FileSystem.mkdirs(jtFs, submitJobDir, mapredSysPerms);
+      Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
+      Path archivesDir =
+          JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
+      // add all the command line files/ jars and archive
+      // first copy them to jobtrackers filesystem
 
-        // need to inform NM to upload the file to shared cache.
-        if (newPath == null && isSharedCacheLibjarsEnabled()) {
-          filesSCUploadPolicies[indexOfFilesSCUploadPolicies] = true;
-        }
-        indexOfFilesSCUploadPolicies++;
+      // We need to account for the distributed cache files applications specify
+      // via
+      // Job or Distributed Cache APIs such as addCacheFile. These files are
+      // already in HDFS.
+      // We don't ask YARN to upload those files to shared cache.
+      int numOfFilesSCUploadPolicies =
+          job.getCacheFiles() != null ? job.getCacheFiles().length : 0;
+      int indexOfFilesSCUploadPolicies = numOfFilesSCUploadPolicies;
+      int numOfArchivesSCUploadPolicies =
+          job.getCacheArchives() != null ? job.getCacheArchives().length : 0;
+      int indexOfArchivesSCUploadPolicies = numOfArchivesSCUploadPolicies;
 
-        if(newPath == null) {
-          Path libjarsDir =
-              JobSubmissionFiles.getJobDistCacheLibjars(submitJobDir);
-          FileSystem.mkdirs(jtFs, libjarsDir, mapredSysPerms);
-          newPath = copyRemoteFiles(libjarsDir, tmp, conf, replication);
-        }
-
-        // In order to support symlink for libjars, we pass the full URL
-        // to DistributedCache.addFileToClassPath.
-        // DistributedCache.addFileToClassPath will set the classpath using
-        // the Path part without fragment, e.g. file.toUri().getPath().
-        // DistributedCache.addFileToClassPath will call addCacheFile with
-        // the full URL with fragment.
-        job.addFileToClassPath(newPath);
+      String[] fileArr = null;
+      if (files != null) {
+        FileSystem.mkdirs(jtFs, filesDir, mapredSysPerms);
+        fileArr = files.split(",");
+        numOfFilesSCUploadPolicies += fileArr.length;
       }
-    }
-      
-    if (archives != null) {
-      for (String tmpArchives: archivesArr) {
-        URI tmpURI;
-        try {
-          tmpURI = new URI(tmpArchives);
-        } catch (URISyntaxException e) {
-          throw new IllegalArgumentException(e);
-        }
-        Path tmp = new Path(tmpURI);
-        Path newPath = null;
-        if (isSharedCacheArchivesEnabled()) {
-          newPath = useSharedCache(tmp, conf, true);
-        }
 
-        // need to inform NM to upload the file to shared cache.
-        if (newPath == null && isSharedCacheArchivesEnabled()) {
-          archivesSCUploadPolicies[indexOfArchivesSCUploadPolicies] = true;
-        }
-        indexOfArchivesSCUploadPolicies++;
-
-        if (newPath == null) {
-          newPath = copyRemoteFiles(archivesDir, tmp, conf, replication);
-        }
-        try {
-          URI pathURI = getPathURI(newPath, tmpURI.getFragment());
-          job.addCacheArchive(pathURI);
-        } catch(URISyntaxException ue) {
-          //should not throw an uri excpetion
-          throw new IOException("Failed to create uri for " + tmpArchives, ue);
-        }
+      String[] libjarsArr = null;
+      if (libjars != null) {
+        libjarsArr = libjars.split(",");
+        numOfFilesSCUploadPolicies += libjarsArr.length;
       }
-    }
 
-    if (jobJar != null) {   // copy jar to JobTracker's fs
-      // use jar name if job is not named. 
-      if ("".equals(job.getJobName())){
-        job.setJobName(new Path(jobJar).getName());
+      String[] archivesArr = null;
+      if (archives != null) {
+        FileSystem.mkdirs(jtFs, archivesDir, mapredSysPerms);
+        archivesArr = archives.split(",");
+        numOfArchivesSCUploadPolicies += archivesArr.length;
       }
-      Path jobJarPath = new Path(jobJar);
-      URI jobJarURI = jobJarPath.toUri();
-      // If the job jar is already in a global fs,
-      // we don't need to copy it from local fs
-      if (jobJarURI.getScheme() == null || jobJarURI.getScheme().equals("file")) {
-        Path newJarPath = null;
-        if (isSharedCacheJobjarEnabled()) {
-          // jobJarPath has the format of "/..." without "file:///" scheme when
-          // users submit local job jar from command line.
-          // We fix up the scheme so that jobJarPath.getFileSystem(conf) can
-          // return the correct file system.
-          // Otherwise, scClient won't be able to locate the file when
-          // it tries to compute the checksum.
-          // This won't break anything given copyJar function below has
-          // the assumption the source is a local file.
-          // Currently jar file has to be either local or on the same cluster
-          // as MR cluster.
-          if (jobJarPath.toUri().getScheme() == null &&
-                  jobJarPath.toUri().getAuthority() == null) {
-            jobJarPath = FileSystem.getLocal(conf).makeQualified(jobJarPath);
+
+      boolean[] filesSCUploadPolicies = new boolean[numOfFilesSCUploadPolicies];
+      boolean[] archivesSCUploadPolicies =
+          new boolean[numOfArchivesSCUploadPolicies];
+
+      if (files != null) {
+        for (String tmpFile : fileArr) {
+          URI tmpURI = null;
+          try {
+            tmpURI = new URI(tmpFile);
+          } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
           }
-          newJarPath = useSharedCache(jobJarPath, conf, false);
+          Path tmp = new Path(tmpURI);
+          Path newPath = null;
+          if (isSharedCacheFilesEnabled()) {
+            newPath = useSharedCache(tmp, conf, true);
+          }
+
+          // need to inform NM to upload the file to shared cache.
+          if (newPath == null && isSharedCacheFilesEnabled()) {
+            filesSCUploadPolicies[indexOfFilesSCUploadPolicies] = true;
+          }
+          indexOfFilesSCUploadPolicies++;
+
+          if (newPath == null) {
+            newPath = copyRemoteFiles(filesDir, tmp, conf, replication);
+          }
+          try {
+            URI pathURI = getPathURI(newPath, tmpURI.getFragment());
+            job.addCacheFile(pathURI);
+          } catch (URISyntaxException ue) {
+            // should not throw a uri exception
+            throw new IOException("Failed to create uri for " + tmpFile, ue);
+          }
         }
-
-        // Inform NM to upload job jar to shared cache.
-        if (newJarPath == null && isSharedCacheJobjarEnabled()) {
-          conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY, true);
-        } else {
-          conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY, false);
-        }
-
-        if(newJarPath == null) {
-          copyJar(jobJarPath, JobSubmissionFiles.getJobJar(submitJobDir),
-              replication);
-          newJarPath = JobSubmissionFiles.getJobJar(submitJobDir);
-        } else {
-
-          // The application wants to use a job jar on the local file system
-          // while the job jar is already in shared cache.
-          // Set the visibility flag properly so that job jar will be localized
-          // to public cache by yarn localizer
-          // We don't set it for other scenarios given default value of
-          // JOBJAR_VISIBILITY is false
-
-          conf.setBoolean(MRJobConfig.JOBJAR_VISIBILITY, true);
-        }
-        // set the job jar size if it is being copied
-        job.getConfiguration().setLong(MRJobConfig.JAR + ".size",
-          getJobJarSize(jobJarPath));
-        job.setJar(newJarPath.toString());
       }
-    } else {
-      LOG.warn("No job jar file set.  User classes may not be found. "+
-      "See Job or Job#setJar(String).");
+
+      if (libjars != null) {
+        for (String tmpjars : libjarsArr) {
+          Path tmp = new Path(tmpjars);
+          Path newPath = null;
+          if (isSharedCacheLibjarsEnabled()) {
+            newPath = useSharedCache(tmp, conf, true);
+          }
+
+          // need to inform NM to upload the file to shared cache.
+          if (newPath == null && isSharedCacheLibjarsEnabled()) {
+            filesSCUploadPolicies[indexOfFilesSCUploadPolicies] = true;
+          }
+          indexOfFilesSCUploadPolicies++;
+
+          if (newPath == null) {
+            Path libjarsDir =
+                JobSubmissionFiles.getJobDistCacheLibjars(submitJobDir);
+            FileSystem.mkdirs(jtFs, libjarsDir, mapredSysPerms);
+            newPath = copyRemoteFiles(libjarsDir, tmp, conf, replication);
+          }
+
+          // In order to support symlink for libjars, we pass the full URL
+          // to DistributedCache.addFileToClassPath.
+          // DistributedCache.addFileToClassPath will set the classpath using
+          // the Path part without fragment, e.g. file.toUri().getPath().
+          // DistributedCache.addFileToClassPath will call addCacheFile with
+          // the full URL with fragment.
+          job.addFileToClassPath(newPath);
+        }
+      }
+
+      if (archives != null) {
+        for (String tmpArchives : archivesArr) {
+          URI tmpURI;
+          try {
+            tmpURI = new URI(tmpArchives);
+          } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e);
+          }
+          Path tmp = new Path(tmpURI);
+          Path newPath = null;
+          if (isSharedCacheArchivesEnabled()) {
+            newPath = useSharedCache(tmp, conf, true);
+          }
+
+          // need to inform NM to upload the file to shared cache.
+          if (newPath == null && isSharedCacheArchivesEnabled()) {
+            archivesSCUploadPolicies[indexOfArchivesSCUploadPolicies] = true;
+          }
+          indexOfArchivesSCUploadPolicies++;
+
+          if (newPath == null) {
+            newPath = copyRemoteFiles(archivesDir, tmp, conf, replication);
+          }
+          try {
+            URI pathURI = getPathURI(newPath, tmpURI.getFragment());
+            job.addCacheArchive(pathURI);
+          } catch (URISyntaxException ue) {
+            // should not throw an uri excpetion
+            throw new IOException("Failed to create uri for " + tmpArchives, ue);
+          }
+        }
+      }
+
+      if (jobJar != null) { // copy jar to JobTracker's fs
+        // use jar name if job is not named.
+        if ("".equals(job.getJobName())) {
+          job.setJobName(new Path(jobJar).getName());
+        }
+        Path jobJarPath = new Path(jobJar);
+        URI jobJarURI = jobJarPath.toUri();
+        // If the job jar is already in a global fs,
+        // we don't need to copy it from local fs
+        if (jobJarURI.getScheme() == null
+            || jobJarURI.getScheme().equals("file")) {
+          Path newJarPath = null;
+          if (isSharedCacheJobjarEnabled()) {
+            // jobJarPath has the format of "/..." without "file:///" scheme
+            // when
+            // users submit local job jar from command line.
+            // We fix up the scheme so that jobJarPath.getFileSystem(conf) can
+            // return the correct file system.
+            // Otherwise, scClient won't be able to locate the file when
+            // it tries to compute the checksum.
+            // This won't break anything given copyJar function below has
+            // the assumption the source is a local file.
+            // Currently jar file has to be either local or on the same cluster
+            // as MR cluster.
+            if (jobJarPath.toUri().getScheme() == null
+                && jobJarPath.toUri().getAuthority() == null) {
+              jobJarPath = FileSystem.getLocal(conf).makeQualified(jobJarPath);
+            }
+            newJarPath = useSharedCache(jobJarPath, conf, false);
+          }
+
+          // Inform NM to upload job jar to shared cache.
+          if (newJarPath == null && isSharedCacheJobjarEnabled()) {
+            conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY, true);
+          } else {
+            conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY,
+                false);
+          }
+
+          if (newJarPath == null) {
+            copyJar(jobJarPath, JobSubmissionFiles.getJobJar(submitJobDir),
+                replication);
+            newJarPath = JobSubmissionFiles.getJobJar(submitJobDir);
+          } else {
+
+            // The application wants to use a job jar on the local file system
+            // while the job jar is already in shared cache.
+            // Set the visibility flag properly so that job jar will be
+            // localized
+            // to public cache by yarn localizer
+            // We don't set it for other scenarios given default value of
+            // JOBJAR_VISIBILITY is false
+
+            conf.setBoolean(MRJobConfig.JOBJAR_VISIBILITY, true);
+          }
+          // set the job jar size if it is being copied
+          job.getConfiguration().setLong(MRJobConfig.JAR + ".size",
+              getJobJarSize(jobJarPath));
+          job.setJar(newJarPath.toString());
+        }
+      } else {
+        LOG.warn("No job jar file set.  User classes may not be found. "
+            + "See Job or Job#setJar(String).");
+      }
+
+      addLog4jToDistributedCache(job, submitJobDir);
+
+      // if scm fails in the middle, we will set shared cache upload policies
+      // for all resources
+      // to be false. The resources that are shared successfully via
+      // SharedCacheClient.use will
+      // continued to be shared.
+      if (scClient != null && !scClient.isScmAvailable()) {
+        conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY, false);
+        Job.setFilesSharedCacheUploadPolicies(conf,
+            new boolean[filesSCUploadPolicies.length]);
+        Job.setArchivesSharedCacheUploadPolicies(conf,
+            new boolean[archivesSCUploadPolicies.length]);
+      } else {
+        Job.setFilesSharedCacheUploadPolicies(conf, filesSCUploadPolicies);
+        Job.setArchivesSharedCacheUploadPolicies(conf, archivesSCUploadPolicies);
+      }
+
+      // set the timestamps of the archives and files
+      // set the public/private visibility of the archives and files
+      ClientDistributedCacheManager
+          .determineTimestampsAndCacheVisibilities(conf);
+      // get DelegationToken for cached file
+      ClientDistributedCacheManager.getDelegationTokens(conf,
+          job.getCredentials());
+    } finally {
+      stopSharedCache();
     }
-
-    addLog4jToDistributedCache(job, submitJobDir);
-
-    // if scm fails in the middle, we will set shared cache upload policies for all resources
-    // to be false. The resources that are shared successfully via SharedCacheClient.use will
-    // continued to be shared.
-    if (scClient != null && !scClient.isScmAvailable()) {
-      conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY, false);
-      Job.setFilesSharedCacheUploadPolicies(conf,
-          new boolean[filesSCUploadPolicies.length]);
-      Job.setArchivesSharedCacheUploadPolicies(conf,
-          new boolean[archivesSCUploadPolicies.length]);
-    } else
-    {
-      Job.setFilesSharedCacheUploadPolicies(conf,
-          filesSCUploadPolicies);
-      Job.setArchivesSharedCacheUploadPolicies(conf,
-          archivesSCUploadPolicies);
-    }
-
-    //  set the timestamps of the archives and files
-    //  set the public/private visibility of the archives and files
-    ClientDistributedCacheManager.determineTimestampsAndCacheVisibilities(conf);
-    // get DelegationToken for cached file
-    ClientDistributedCacheManager.getDelegationTokens(conf, job
-        .getCredentials());
-
-    stopSharedCache();
 
   }
 
