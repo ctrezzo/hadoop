@@ -38,6 +38,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceResponse
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksum;
 import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
@@ -56,13 +57,6 @@ public class SharedCacheClientImpl extends SharedCacheClient {
   private InetSocketAddress scmAddress;
   private Configuration conf;
   private SharedCacheChecksum checksum;
-
-  // If scm isn't available, we will mark this instance
-  // of SharedCacheClient unusable. This is useful when
-  // the caller of SharedCacheClient needs to call the same
-  // instance of SharedCacheClient multiple times; it allows
-  // the caller to quickly fall back to the non-SCM approach.
-  private volatile boolean scmAvailable = false;
 
   public SharedCacheClientImpl() {
     super(SharedCacheClientImpl.class.getName());
@@ -93,7 +87,6 @@ public class SharedCacheClientImpl extends SharedCacheClient {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Connecting to Shared Cache Manager at " + this.scmAddress);
     }
-    scmAvailable = true;
     super.serviceStart();
   }
 
@@ -105,12 +98,9 @@ public class SharedCacheClientImpl extends SharedCacheClient {
     super.serviceStop();
   }
 
-  public boolean isScmAvailable() {
-    return this.scmAvailable;
-  }
-
   @Override
-  public Path use(ApplicationId applicationId, String resourceKey) {
+  public Path use(ApplicationId applicationId, String resourceKey)
+      throws YarnException {
     Path resourcePath = null;
     UseSharedCacheResourceRequest request = Records.newRecord(
         UseSharedCacheResourceRequest.class);
@@ -125,18 +115,14 @@ public class SharedCacheClientImpl extends SharedCacheClient {
       // Just catching IOException isn't enough.
       // RPC call can throw ConnectionException.
       // We don't handle different exceptions separately at this point.
-      LOG.warn("SCM might be down. The exception is " + e.getMessage());
-      e.printStackTrace();
-      scmAvailable = false;
+      throw new YarnException(e);
     }
     return resourcePath;
   }
 
   @Override
-  public void release(ApplicationId applicationId, String resourceKey) {
-    if (!scmAvailable) {
-      return;
-    }
+  public void release(ApplicationId applicationId, String resourceKey)
+      throws YarnException {
     ReleaseSharedCacheResourceRequest request = Records.newRecord(
         ReleaseSharedCacheResourceRequest.class);
     request.setAppId(applicationId);
@@ -147,9 +133,7 @@ public class SharedCacheClientImpl extends SharedCacheClient {
     } catch (Exception e) {
       // Just catching IOException isn't enough.
       // RPC call can throw ConnectionException.
-      LOG.warn("SCM might be down. The exception is " + e.getMessage());
-      e.printStackTrace();
-      scmAvailable = false;
+      throw new YarnException(e);
     }
   }
 
