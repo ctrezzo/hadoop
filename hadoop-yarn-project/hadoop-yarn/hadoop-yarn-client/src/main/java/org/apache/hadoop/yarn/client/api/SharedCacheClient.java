@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.impl.SharedCacheClientImpl;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 /**
  * This is the client for YARN's shared cache.
@@ -68,7 +69,8 @@ public abstract class SharedCacheClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract Path use(ApplicationId applicationId, String resourceKey);
+  public abstract Path use(ApplicationId applicationId, String resourceKey)
+      throws YarnException;
 
   /**
    * <p>
@@ -90,7 +92,8 @@ public abstract class SharedCacheClient extends AbstractService {
    */
   @Public
   @Unstable
-  public abstract void release(ApplicationId applicationId, String resourceKey);
+  public abstract void release(ApplicationId applicationId, String resourceKey)
+      throws YarnException;
 
   /**
    * A convenience method to calculate the checksum of a specified file.

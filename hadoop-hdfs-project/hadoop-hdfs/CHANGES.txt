@@ -476,6 +476,9 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7530. Allow renaming of encryption zone roots. (Charles Lamb via wang)
 
+    HDFS-7484. Make FSDirectory#addINode take existing INodes as its parameter.
+    (jing9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
@@ -621,6 +624,18 @@ Release 2.7.0 - UNRELEASED
     HDFS-7431. log message for InvalidMagicNumberException may be incorrect.
     (Yi Liu via cnauroth)
 
+    HDFS-7552. Change FsVolumeList toString() to fix
+    TestDataNodeVolumeFailureToleration (Liang Xie via Colin P. McCabe)
+
+    HDFS-7557. Fix spacing for a few keys in DFSConfigKeys.java 
+    (Colin P.McCabe)
+
+    HDFS-7560. ACLs removed by removeDefaultAcl() will be back after NameNode
+    restart/failover. (Vinayakumar B via cnauroth)
+
+    HDFS-7456. De-duplicate AclFeature instances with same AclEntries do reduce
+    memory footprint of NameNode (vinayakumarb)
+
 Release 2.6.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -644,6 +659,9 @@ Release 2.6.1 - UNRELEASED
 
     HDFS-7503. Namenode restart after large deletions can cause slow
     processReport. (Arpit Agarwal)
+
+    HDFS-7443. Datanode upgrade to BLOCKID_BASED_LAYOUT fails if duplicate
+    block files are present in the same volume (cmccabe)
 
 Release 2.6.0 - 2014-11-18
 
