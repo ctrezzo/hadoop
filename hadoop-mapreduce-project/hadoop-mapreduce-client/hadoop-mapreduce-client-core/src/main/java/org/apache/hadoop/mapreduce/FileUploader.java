@@ -36,9 +36,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
-import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -48,6 +48,15 @@ class FileUploader {
   private SharedCacheConfig scConfig = new SharedCacheConfig();
   private SharedCacheClient scClient = null;
   private ApplicationId appId = null;
+
+  /**
+   * If we fail to contact the SCM, we do not use it for the rest of this
+   * FileUploaders life. This prevents us from having to timeout each time we
+   * try to upload a file while the SCM is unavailable. Instead we timeout/error
+   * the first time and quickly revert to the default behavior without the
+   * shared cache.
+   */
+  private volatile boolean scmAvailable = false;
 
   FileUploader(FileSystem submitFs) {
     this.jtFs = submitFs;
@@ -73,23 +82,28 @@ class FileUploader {
     SharedCacheClient scClient = SharedCacheClient.createSharedCacheClient();
     scClient.init(conf);
     scClient.start();
+    scmAvailable = true;
     return scClient;
   }
 
+  private boolean isScmAvailable() {
+    return this.scmAvailable;
+  }
+
   private boolean isSharedCacheFilesEnabled() {
-    return (scConfig.isSharedCacheFilesEnabled() && scClient.isScmAvailable());
+    return (scConfig.isSharedCacheFilesEnabled() && isScmAvailable());
   }
 
   private boolean isSharedCacheLibjarsEnabled() {
-    return (scConfig.isSharedCacheLibjarsEnabled() && scClient.isScmAvailable());
+    return (scConfig.isSharedCacheLibjarsEnabled() && isScmAvailable());
   }
 
   private boolean isSharedCacheArchivesEnabled() {
-    return (scConfig.isSharedCacheArchivesEnabled() && scClient.isScmAvailable());
+    return (scConfig.isSharedCacheArchivesEnabled() && isScmAvailable());
   }
 
   private boolean isSharedCacheJobjarEnabled() {
-    return (scConfig.isSharedCacheJobjarEnabled() && scClient.isScmAvailable());
+    return (scConfig.isSharedCacheJobjarEnabled() && isScmAvailable());
   }
 
   private Path useSharedCache(Path sourceFile, Configuration conf,
@@ -98,7 +112,14 @@ class FileUploader {
     // local resource, something is really wrong with the file system;
     // even non-SCM approach won't work. Let us just throw the exception.
     String checksum = scClient.getFileChecksum(sourceFile);
-    Path path = scClient.use(this.appId, checksum);
+    Path path = null;
+    try {
+      path = scClient.use(this.appId, checksum);
+    } catch (YarnException e) {
+      LOG.warn("Error trying to contact the shared cache manager,"
+          + " disabling the SCMClient for the rest of this job submission", e);
+      scmAvailable = false;
+    }
     if (path != null) {
       addChecksum(checksum, conf);
       // Symlink is used to address the following scenario.
@@ -426,7 +447,7 @@ class FileUploader {
       // to be false. The resources that are shared successfully via
       // SharedCacheClient.use will
       // continued to be shared.
-      if (scClient != null && !scClient.isScmAvailable()) {
+      if (scClient != null && !isScmAvailable()) {
         conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY, false);
         Job.setFilesSharedCacheUploadPolicies(conf,
             new boolean[filesSCUploadPolicies.length]);
@@ -447,7 +468,6 @@ class FileUploader {
     } finally {
       stopSharedCache();
     }
-
   }
 
   // copies a file to the jobtracker filesystem and returns the path where it
