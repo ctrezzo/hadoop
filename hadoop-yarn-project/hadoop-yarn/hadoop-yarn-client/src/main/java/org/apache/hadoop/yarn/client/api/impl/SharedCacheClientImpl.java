@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksum;
 import org.apache.hadoop.yarn.sharedcache.SharedCacheChecksumFactory;
 import org.apache.hadoop.yarn.util.Records;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * An implementation of the SharedCacheClient API.
  */
@@ -80,10 +82,7 @@ public class SharedCacheClientImpl extends SharedCacheClient {
 
   @Override
   protected void serviceStart() throws Exception {
-    YarnRPC rpc = YarnRPC.create(getConfig());
-
-    this.scmClient = (ClientSCMProtocol) rpc.getProxy(
-        ClientSCMProtocol.class, this.scmAddress, getConfig());
+    this.scmClient = createClientProxy();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Connecting to Shared Cache Manager at " + this.scmAddress);
     }
@@ -92,10 +91,22 @@ public class SharedCacheClientImpl extends SharedCacheClient {
 
   @Override
   protected void serviceStop() throws Exception {
+    stopClientProxy();
+    super.serviceStop();
+  }
+
+  @VisibleForTesting
+  protected ClientSCMProtocol createClientProxy() {
+    YarnRPC rpc = YarnRPC.create(getConfig());
+    return (ClientSCMProtocol) rpc.getProxy(ClientSCMProtocol.class,
+        this.scmAddress, getConfig());
+  }
+
+  @VisibleForTesting
+  protected void stopClientProxy() {
     if (this.scmClient != null) {
       RPC.stopProxy(this.scmClient);
     }
-    super.serviceStop();
   }
 
   @Override
