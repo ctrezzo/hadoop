@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ClientSCMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.ReleaseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.UseSharedCacheResourceResponsePBImpl;
@@ -74,5 +75,13 @@ public class TestSharedCacheClientImpl {
         response);
     Path newPath = client.use(mock(ApplicationId.class), "key");
     assertEquals(file, newPath);
+  }
+
+  @Test
+  public void testRelease() throws Exception {
+    // Release does not care about the return value because it is empty
+    when(cProtocol.release(isA(ReleaseSharedCacheResourceRequest.class)))
+        .thenReturn(null);
+    client.release(mock(ApplicationId.class), "key");
   }
 }
