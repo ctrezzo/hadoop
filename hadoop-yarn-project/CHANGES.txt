@@ -70,6 +70,7 @@ Release 2.7.0 - UNRELEASED
     YARN-2738. [YARN-2574] Add FairReservationSystem for FairScheduler. 
     (Anubhav Dhoot via kasha)
 
+
   IMPROVEMENTS
 
     YARN-2950. Change message to mandate, not suggest JS requirement on UI.
@@ -154,6 +155,12 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2993. Several fixes (missing acl check, error log msg ...) and some 
     refinement in AdminService. (Yi Liu via junping_du)
+
+    YARN-2943. Added node-labels page on RM web UI. (Wangda Tan via jianhe)
+
+    YARN-2998. Abstract out scheduler independent PlanFollower components. 
+    (Anubhav Dhoot via kasha)
+
 
   OPTIMIZATIONS
 
@@ -294,6 +301,15 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2938. Fixed new findbugs warnings in hadoop-yarn-resourcemanager and
     hadoop-yarn-applicationhistoryservice. (Varun Saxena via zjshen)
+
+    YARN-2987. Fixed ClientRMService#getQueueInfo to check against queue and
+    app ACLs. (Varun Saxena via jianhe)
+
+    YARN-2991. Fixed DrainDispatcher to reuse the draining code path in
+    AsyncDispatcher. (Rohith Sharmaks via zjshen)
+
+    YARN-2922. ConcurrentModificationException in CapacityScheduler's LeafQueue.
+    (Rohith Sharmaks via ozawa)
 
 Release 2.6.0 - 2014-11-18
 
