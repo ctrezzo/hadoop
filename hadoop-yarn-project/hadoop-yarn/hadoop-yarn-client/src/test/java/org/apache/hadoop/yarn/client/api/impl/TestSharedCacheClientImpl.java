@@ -18,8 +18,14 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.yarn.api.ClientSCMProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ReleaseSharedCacheResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceRequest;
@@ -27,7 +33,9 @@ import org.apache.hadoop.yarn.api.protocolrecords.UseSharedCacheResourceResponse
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.UseSharedCacheResourceResponsePBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -36,8 +44,34 @@ import static org.junit.Assert.assertEquals;
 
 public class TestSharedCacheClientImpl {
 
+  private static final Log LOG = LogFactory
+      .getLog(TestSharedCacheClientImpl.class);
+
   public static SharedCacheClientImpl client;
   public static ClientSCMProtocol cProtocol;
+  private static Path TEST_ROOT_DIR;
+  private static FileSystem localFs;
+
+  @BeforeClass
+  public static void beforeClass() throws IOException {
+    localFs = FileSystem.getLocal(new Configuration());
+    TEST_ROOT_DIR =
+        new Path("target", TestSharedCacheClientImpl.class.getName()
+            + "-tmpDir").makeQualified(localFs.getUri(),
+            localFs.getWorkingDirectory());
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    try {
+      if (localFs != null) {
+        localFs.close();
+      }
+    } catch (IOException ioe) {
+      LOG.info("IO exception in closing file system)");
+      ioe.printStackTrace();
+    }
+  }
 
   @Before
   public void setup() {
@@ -83,5 +117,10 @@ public class TestSharedCacheClientImpl {
     when(cProtocol.release(isA(ReleaseSharedCacheResourceRequest.class)))
         .thenReturn(null);
     client.release(mock(ApplicationId.class), "key");
+  }
+
+  @Test
+  public void testChecksum() throws Exception {
+
   }
 }
