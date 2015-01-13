@@ -26,8 +26,8 @@ import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,8 +40,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+import com.google.common.annotations.VisibleForTesting;
+
+@Private
+@Unstable
 class FileUploader {
   protected static final Log LOG = LogFactory.getLog(FileUploader.class);
   private FileSystem jtFs;
@@ -78,6 +80,7 @@ class FileUploader {
 
   // make it protected so that test code can overload the method
   // to provide test or mock SharedCacheClient
+  @VisibleForTesting
   protected SharedCacheClient createSharedCacheClient(Configuration conf) {
     SharedCacheClient scClient = SharedCacheClient.createSharedCacheClient();
     scClient.init(conf);
@@ -86,7 +89,8 @@ class FileUploader {
     return scClient;
   }
 
-  private boolean isScmAvailable() {
+  @VisibleForTesting
+  protected boolean isScmAvailable() {
     return this.scmAvailable;
   }
 

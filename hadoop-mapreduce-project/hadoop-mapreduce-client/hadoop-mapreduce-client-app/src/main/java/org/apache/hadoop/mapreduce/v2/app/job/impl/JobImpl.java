@@ -122,9 +122,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.sharedcache.SharedCacheClient;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -1117,24 +1118,25 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private void cleanupSharedCacheResources() {
     String[] checksums = conf.getStrings(MRJobConfig.SHARED_CACHE_CHECKSUMS);
     if (checksums != null && checksums.length != 0) {
-      SharedCacheClient scClient = null;
+      SharedCacheClient scClient = SharedCacheClient.createSharedCacheClient();
       try {
-        scClient = new SharedCacheClient();
         scClient.init(conf);
         scClient.start();
         for (String checksum : checksums) {
-          scClient.release(this.applicationAttemptId.getApplicationId(),
-              checksum);
-          metrics.releasedSharedCacheResources();
+          try {
+            scClient.release(this.applicationAttemptId.getApplicationId(),
+                checksum);
+            metrics.releasedSharedCacheResources();
+          } catch (YarnException e) {
+            LOG.warn(
+                "YarnException thrown when releasing shared cache resource."
+                    + " Checksum: " + checksum + ", ApplicationId: "
+                    + this.applicationAttemptId.getApplicationId(), e);
+          }
         }
       } finally {
         if (scClient != null) {
-          try {
-            scClient.close();
-          } catch (IOException e) {
-            LOG.warn("IOException thrown during shared cache client shutdown.",
-                e);
-          }
+          scClient.stop();
         }
       }
     }

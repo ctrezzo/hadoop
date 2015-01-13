@@ -54,8 +54,9 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.client.api.SharedCacheClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.sharedcache.SharedCacheClient;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -109,34 +110,53 @@ public class TestFileUploader {
   }
 
   private class MyFileUploader extends FileUploader {
+    // The mocked SharedCacheClient that will be fed into the FileUploader
     private SharedCacheClient mockscClient = mock(SharedCacheClient.class);
-
-    // Used for checksum calculation
-    private SharedCacheClient scClient = new SharedCacheClient();
+    // A real client for checksum calculation
+    private SharedCacheClient scClient = SharedCacheClient
+        .createSharedCacheClient();
 
     MyFileUploader(FileSystem submitFs, Configuration conf)
         throws IOException {
       super(submitFs);
+      // Initialize the real client, but don't start it. We don't need or want
+      // to create an actual proxy because we only use this for mocking out the
+      // getFileChecksum method.
       scClient.init(conf);
-      when(mockscClient.isScmAvailable()).thenReturn(true);
       when(mockscClient.getFileChecksum(any(Path.class))).thenAnswer(
           new Answer<String>() {
-        @Override
-        public String answer(InvocationOnMock invocation) throws Throwable {
-          Path file = (Path)invocation.getArguments()[0];
-          return scClient.getFileChecksum(file);
-        }
-      });
+            @Override
+            public String answer(InvocationOnMock invocation) throws Throwable {
+              Path file = (Path) invocation.getArguments()[0];
+              // Use the real scClient to generate the checksum. We use an
+              // answer/mock combination to avoid having to spy on a real
+              // SharedCacheClient object.
+              return scClient.getFileChecksum(file);
+            }
+          });
     }
 
-    public void makeFileInSharedCache(Path localFile, Path remoteFile)
-        throws IOException {
-      when(mockscClient.use(any(ApplicationId.class),
-          eq(scClient.getFileChecksum(localFile)))).thenReturn(remoteFile);
+    @Override
+    protected boolean isScmAvailable() {
+      // For the purpose of tests with the mocked client, always say that the
+      // scm is available.
+      return true;
+    }
+
+    // This method is to prime the mock client with the correct checksum, so it
+    // looks like a given resource is present in the shared cache.
+    public void mockFileInSharedCache(Path localFile, Path remoteFile)
+        throws YarnException, IOException {
+      // when the resource is referenced, simply return the remote path to the
+      // caller
+      when(
+          mockscClient.use(any(ApplicationId.class),
+              eq(scClient.getFileChecksum(localFile)))).thenReturn(remoteFile);
     }
 
     @Override
     protected SharedCacheClient createSharedCacheClient(Configuration conf) {
+      // Feed the mocked SharedCacheClient into the FileUploader logic
       return mockscClient;
     }
   }
@@ -189,7 +209,7 @@ public class TestFileUploader {
     // shared cache is enabled for archives and libjars type
     // the # of times SharedCacheClient.use is called should ==
     // total # of libjars and archives
-    uploadFilesToRemoteFS(job, jobConf, 5, 2, 1, 2, false);
+    ;
   }
 
   private JobConf createJobConf() {
@@ -207,13 +227,12 @@ public class TestFileUploader {
     return remoteFile;
   }
 
-  private void makeJarAvailableInSharedCache(
-      Path jar, MyFileUploader fileUploader)
-      throws IOException {
-    // make jar cache available
-    copyToRemote(jar);
+  private void makeJarAvailableInSharedCache(Path jar,
+      MyFileUploader fileUploader) throws YarnException, IOException {
+    // copy file to remote file system
     Path remoteFile = copyToRemote(jar);
-    fileUploader.makeFileInSharedCache(jar, remoteFile);
+    // prime mocking so that it looks like this file is in the shared cache
+    fileUploader.mockFileInSharedCache(jar, remoteFile);
   }
 
   private void uploadFilesToRemoteFS(Job job, JobConf jobConf,
