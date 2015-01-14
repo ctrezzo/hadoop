@@ -163,8 +163,6 @@ public class LeafQueue extends AbstractCSQueue {
         CSQueueUtils.computeMaxActiveApplicationsPerUser(
             maxActiveAppsUsingAbsCap, userLimit, userLimitFactor);
 
-    this.queueInfo.setChildQueues(new ArrayList<QueueInfo>());
-
     QueueState state = cs.getConfiguration().getState(getQueuePath());
 
     Map<QueueACL, AccessControlList> acls = 
@@ -235,14 +233,14 @@ public class LeafQueue extends AbstractCSQueue {
         this.defaultLabelExpression)) {
       throw new IOException("Invalid default label expression of "
           + " queue="
-          + queueInfo.getQueueName()
+          + getQueueName()
           + " doesn't have permission to access all labels "
           + "in default label expression. labelExpression of resource request="
           + (this.defaultLabelExpression == null ? ""
               : this.defaultLabelExpression)
           + ". Queue labels="
-          + (queueInfo.getAccessibleNodeLabels() == null ? "" : StringUtils.join(queueInfo
-              .getAccessibleNodeLabels().iterator(), ',')));
+          + (getAccessibleNodeLabels() == null ? "" : StringUtils.join(
+              getAccessibleNodeLabels().iterator(), ',')));
     }
     
     this.nodeLocalityDelay = nodeLocalityDelay;
@@ -433,7 +431,7 @@ public class LeafQueue extends AbstractCSQueue {
   @Override
   public synchronized QueueInfo getQueueInfo(
       boolean includeChildQueues, boolean recursive) {
-    queueInfo.setCurrentCapacity(usedCapacity);
+    QueueInfo queueInfo = getQueueInfo();
     return queueInfo;
   }
 
@@ -1878,7 +1876,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   // return a single Resource capturing the overal amount of pending resources
-  public Resource getTotalResourcePending() {
+  public synchronized Resource getTotalResourcePending() {
     Resource ret = BuilderUtils.newResource(0, 0);
     for (FiCaSchedulerApp f : activeApplications) {
       Resources.addTo(ret, f.getTotalPendingRequests());
@@ -1887,7 +1885,7 @@ public class LeafQueue extends AbstractCSQueue {
   }
 
   @Override
-  public void collectSchedulerApplications(
+  public synchronized void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
     for (FiCaSchedulerApp pendingApp : pendingApplications) {
       apps.add(pendingApp.getApplicationAttemptId());

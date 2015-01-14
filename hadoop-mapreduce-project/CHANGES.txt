@@ -238,6 +238,9 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-6149. Document override log4j.properties in MR job.
+    (Junping Du via harsh)
+
     MAPREDUCE-6194. Bubble up final exception in failures during creation
     of output collectors (Varun Saxena via harsh)
 
@@ -249,6 +252,13 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6046. Change the class name for logs in RMCommunicator
     (Sahil Takiar via devaraj)
+
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
+    MAPREDUCE-6173. Document the configuration of deploying MR over distributed
+    cache with enabling wired encryption at the same time. 
+    (Junping Du via xgong)
 
   OPTIMIZATIONS
 
@@ -290,6 +300,9 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6199. AbstractCounters are not reset completely on
     deserialization (adhoot via rkanter)
+
+    MAPREDUCE-6206. TestAggregatedTransferRate fails on non-US systems (Jens
+    Rabe via jlowe)
 
 Release 2.6.0 - 2014-11-18
 

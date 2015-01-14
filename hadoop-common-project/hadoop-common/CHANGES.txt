@@ -141,7 +141,15 @@ Trunk (Unreleased)
     HADOOP-11352 Clean up test-patch.sh to disable "+1 contrib tests"
     (Akira AJISAKA via stevel)
 
+    HADOOP-10788. Rewrite kms to use new shell framework (John Smith via aw)
+
+    HADOOP-11058. Missing HADOOP_CONF_DIR generates strange results
+    (Masatake Iwasaki via aw)
+
   BUG FIXES
+
+    HADOOP-11473. test-patch says "-1 overall" even when all checks are +1
+    (Jason Lowe via raviprak)
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
     (Junping Du via llu)
@@ -342,6 +350,8 @@ Trunk (Unreleased)
 
     HADOOP-11397. Can't override HADOOP_IDENT_STRING (Kengo Seki via aw)
 
+    HADOOP-10908. Common needs updates for shell rewrite (aw)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -450,6 +460,24 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11399. Java Configuration file and .xml files should be
     automatically cross-compared (rchiang via rkanter)
 
+    HADOOP-11455. KMS and Credential CLI should request confirmation for
+    deletion by default. (Charles Lamb via yliu)
+
+    HADOOP-11390 Metrics 2 ganglia provider to include hostname in
+    unresolved address problems. (Varun Saxena via stevel)
+
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
+    HADOOP-11464. Reinstate support for launching Hadoop processes on Windows
+    using Cygwin. (cnauroth)
+
+    HADOOP-9992. Modify the NN loadGenerator to optionally run as a MapReduce job
+    (Akshay Radia via brandonli)
+
+    HADOOP-11465. Fix findbugs warnings in hadoop-gridmix. (Varun Saxena via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
@@ -465,6 +493,9 @@ Release 2.7.0 - UNRELEASED
     full. (Eric Hanson via cnauroth)
 
   BUG FIXES
+
+    HADOOP 11400. GraphiteSink does not reconnect to Graphite after 'broken pipe' 
+    (Kamil Gorlo via raviprak)
 
     HADOOP-11236. NFS: Fix javadoc warning in RpcProgram.java (Abhiraj Butala via harsh)
 
@@ -657,6 +688,18 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11039. ByteBufferReadable API doc is inconsistent with the
     implementations. (Yi Liu via Colin P. McCabe)
+
+    HADOOP-11446. S3AOutputStream should use shared thread pool to
+    avoid OutOfMemoryError. (Ted Yu via stevel)	
+
+    HADOOP-11459. Fix recent findbugs in ActiveStandbyElector, NetUtils
+    and ShellBasedIdMapping (vinayakumarb)
+
+    HADOOP-11445. Bzip2Codec: Data block is skipped when position of newly
+    created stream is equal to start of split (Ankit Kamboj via jlowe)
+
+    HADOOP-11462. TestSocketIOWithTimeout needs change for PowerPC platform.
+    (Ayappan via cnauroth)
 
 Release 2.6.0 - 2014-11-18
 
