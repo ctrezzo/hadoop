@@ -43,9 +43,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 public class TestSharedCacheClientImpl {
 
@@ -59,9 +57,6 @@ public class TestSharedCacheClientImpl {
   private static String input = "This is a test file.";
   private static String inputChecksumSHA256 =
       "f29bc64a9d3732b4b9035125fdb3285f5b6455778edca72414671e0ca3b2e0de";
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @BeforeClass
   public static void beforeClass() throws IOException {
@@ -122,13 +117,11 @@ public class TestSharedCacheClientImpl {
     assertEquals(file, newPath);
   }
 
-  @Test
+  @Test(expected = YarnException.class)
   public void testUseError() throws Exception {
     String message = "Mock IOExcepiton!";
     when(cProtocol.use(isA(UseSharedCacheResourceRequest.class))).thenThrow(
         new IOException(message));
-    exception.expect(YarnException.class);
-    exception.expectMessage(message);
     client.use(mock(ApplicationId.class), "key");
   }
 
@@ -140,13 +133,11 @@ public class TestSharedCacheClientImpl {
     client.release(mock(ApplicationId.class), "key");
   }
 
-  @Test
+  @Test(expected = YarnException.class)
   public void testReleaseError() throws Exception {
     String message = "Mock IOExcepiton!";
     when(cProtocol.release(isA(ReleaseSharedCacheResourceRequest.class)))
         .thenThrow(new IOException(message));
-    exception.expect(YarnException.class);
-    exception.expectMessage(message);
     client.release(mock(ApplicationId.class), "key");
   }
 
@@ -157,10 +148,9 @@ public class TestSharedCacheClientImpl {
     assertEquals(inputChecksumSHA256, client.getFileChecksum(file));
   }
 
-  @Test
+  @Test(expected = FileNotFoundException.class)
   public void testNonexistantFileChecksum() throws Exception {
     Path file = new Path(TEST_ROOT_DIR, "non-existant-file");
-    exception.expect(FileNotFoundException.class);
     client.getFileChecksum(file);
   }
 
