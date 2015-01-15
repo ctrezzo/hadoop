@@ -183,6 +183,12 @@ Release 2.7.0 - UNRELEASED
     YARN-2643. Don't create a new DominantResourceCalculator on every
     FairScheduler.allocate call. (kasha via rkanter)
 
+    YARN-3019. Make work-preserving-recovery the default mechanism for RM 
+    recovery. (Jian He via junping_du)
+
+    YARN-2807. Option "--forceactive" not works as described in usage of
+    "yarn rmadmin -transitionToActive". (Masatake Iwasaki via xgong)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -355,6 +361,9 @@ Release 2.7.0 - UNRELEASED
 
     YARN-3027. Scheduler should use totalAvailable resource from node instead of
     availableResource for maxAllocation. (adhoot via rkanter)
+
+    YARN-2637. Fixed max-am-resource-percent calculation in CapacityScheduler
+    when activating applications. (Craig Welch via jianhe)
 
 Release 2.6.0 - 2014-11-18
 
