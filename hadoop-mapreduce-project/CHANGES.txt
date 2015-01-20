@@ -253,6 +253,13 @@ Release 2.7.0 - UNRELEASED
     MAPREDUCE-6046. Change the class name for logs in RMCommunicator
     (Sahil Takiar via devaraj)
 
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
+    MAPREDUCE-6173. Document the configuration of deploying MR over distributed
+    cache with enabling wired encryption at the same time. 
+    (Junping Du via xgong)
+
   OPTIMIZATIONS
 
     MAPREDUCE-6169. MergeQueue should release reference to the current item 
@@ -260,6 +267,9 @@ Release 2.7.0 - UNRELEASED
     (Zhihai Xu via kasha)
 
   BUG FIXES
+
+    MAPREDUCE-6210. Use getApplicationAttemptId() instead of getApplicationId()
+    for logging AttemptId in RMContainerAllocator.java (Leitao Guo via aajisaka)
 
     MAPREDUCE-6177. Minor typo in the EncryptedShuffle document about
     ssl-client.xml (Yangping Wu via harsh)
@@ -293,6 +303,9 @@ Release 2.7.0 - UNRELEASED
 
     MAPREDUCE-6199. AbstractCounters are not reset completely on
     deserialization (adhoot via rkanter)
+
+    MAPREDUCE-6206. TestAggregatedTransferRate fails on non-US systems (Jens
+    Rabe via jlowe)
 
 Release 2.6.0 - 2014-11-18
 

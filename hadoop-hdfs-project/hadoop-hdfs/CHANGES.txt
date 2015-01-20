@@ -18,6 +18,10 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
+    HDFS-3107. Introduce truncate. (Plamen Jeliazkov via shv)
+
+    HDFS-7056. Snapshot support for truncate. (Plamen Jeliazkov and shv)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -124,6 +128,10 @@ Trunk (Unreleased)
 
     HDFS-6609. Use DirectorySnapshottableFeature to represent a snapshottable
     directory. (Jing Zhao via wheat9)
+
+    HDFS-5782. Change BlockListAsLongs constructor to take Replica as parameter
+    type instead of concrete classes Block and ReplicaInfo.  (David Powell
+    and Joe Pallas via szetszwo)
 
   OPTIMIZATIONS
 
@@ -479,6 +487,29 @@ Release 2.7.0 - UNRELEASED
     HDFS-7484. Make FSDirectory#addINode take existing INodes as its parameter.
     (jing9)
 
+    HADOOP-11032. Replace use of Guava's Stopwatch with Hadoop's StopWatch
+    (ozawa)
+
+    HADOOP-11470. Remove some uses of obsolete guava APIs from the hadoop
+    codebase. (Sangjin Lee via Colin P. McCabe)
+
+    HDFS-7182. JMX metrics aren't accessible when NN is busy. (Ming Ma via jing9)
+
+    HDFS-7323. Move the get/setStoragePolicy commands out from dfsadmin.
+    (jing9 via yliu)
+
+    HDFS-7326: Add documentation for hdfs debug commands (Vijay Bhat via Colin
+    P. McCabe)
+
+    HDFS-7598. Remove dependency on old version of guava in
+    TestDFSClientCache#testEviction. (Sangjin Lee via Colin P. McCabe)
+
+    HDFS-7600. Refine hdfs admin classes to reuse common code. (jing9)
+
+    HDFS-2219. Change fsck to support fully qualified paths so that a 
+    particular namenode in a federated cluster with multiple namenodes
+    can be specified in the path parameter.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
@@ -638,6 +669,38 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7563. NFS gateway parseStaticMap NumberFormatException 
     (Yongjun Zhang via brandonli)
+
+    HDFS-7572. TestLazyPersistFiles#testDnRestartWithSavedReplicas is flaky on
+    Windows. (Arpit Agarwal via cnauroth)
+
+    HDFS-7583. Fix findbug in TransferFsImage.java (vinayakumarb)
+
+    HDFS-7564. NFS gateway dynamically reload UID/GID mapping file /etc/nfs.map
+    (Yongjun Zhang via brandonli)
+
+    HDFS-7561. TestFetchImage should write fetched-image-dir under target.
+    (Liang Xie via shv)
+
+    HDFS-7589. Break the dependency between libnative_mini_dfs and libhdfs.
+    (Zhanwei Wang via cnauroth)
+
+    HDFS-7579. Improve log reporting during block report rpc failure.
+    (Charles Lamb via cnauroth)
+
+    HDFS-7596. NameNode should prune dead storages from storageMap.
+    (Arpit Agarwal via cnauroth)
+
+    HDFS-7533. Datanode sometimes does not shutdown on receiving upgrade
+    shutdown command (Eric Payne via kihwal)
+
+    HDFS-5445. PacketReceiver populates the packetLen field in PacketHeader
+    incorrectly (Jonathan Mace via Colin P. McCabe)
+
+    HDFS-7470. SecondaryNameNode need twice memory when calling
+    reloadFromImageFile. (zhaoyunjiong via cnauroth)
+
+    HDFS-7585. Get TestEnhancedByteBufferAccess working on CPU architectures
+    with page sizes other than 4096 (Sam Liu via Colin P. McCabe)
 
 Release 2.6.1 - UNRELEASED
 
