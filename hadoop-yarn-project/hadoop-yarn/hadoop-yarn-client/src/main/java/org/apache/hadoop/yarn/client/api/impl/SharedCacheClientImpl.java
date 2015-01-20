@@ -106,6 +106,7 @@ public class SharedCacheClientImpl extends SharedCacheClient {
   protected void stopClientProxy() {
     if (this.scmClient != null) {
       RPC.stopProxy(this.scmClient);
+      this.scmClient = null;
     }
   }
 

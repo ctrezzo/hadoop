@@ -75,7 +75,13 @@ Release 2.7.0 - UNRELEASED
     YARN-2427. Added the API of moving apps between queues in RM web services.
     (Varun Vasudev via zjshen)
 
+    YARN-2217. [YARN-1492] Shared cache client side changes. 
+    (Chris Trezzo via kasha)
+
   IMPROVEMENTS
+
+    YARN-3005. [JDK7] Use switch statement for String instead of if-else
+    statement in RegistrySecurity.java (Kengo Seki via aajisaka)
 
     YARN-2950. Change message to mandate, not suggest JS requirement on UI.
     (Dustin Cote via harsh)
@@ -189,9 +195,14 @@ Release 2.7.0 - UNRELEASED
     YARN-2807. Option "--forceactive" not works as described in usage of
     "yarn rmadmin -transitionToActive". (Masatake Iwasaki via xgong)
 
+    YARN-2984. Metrics for container's actual memory usage. (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-3071. Remove invalid char from sample conf in doc of FairScheduler.
+    (Masatake Iwasaki via aajisaka)
 
     YARN-2254. TestRMWebServicesAppsModification should run against both 
     CS and FS. (Zhihai Xu via kasha)
@@ -364,6 +375,24 @@ Release 2.7.0 - UNRELEASED
 
     YARN-2637. Fixed max-am-resource-percent calculation in CapacityScheduler
     when activating applications. (Craig Welch via jianhe)
+
+    YARN-2861. Fixed Timeline DT secret manager to not reuse RM's configs.
+    (Zhijie Shen via jianhe)
+
+    YARN-3064. TestRMRestart/TestContainerResourceUsage/TestNodeManagerResync 
+    failure with allocation timeout. (Jian He via junping_du)
+
+    YARN-2815. Excluded transitive dependency of JLine in hadoop-yarn-server-common.
+    (Ferdinand Xu via zjshen)
+
+    YARN-3070. TestRMAdminCLI#testHelp fails for transitionToActive command. 
+    (Contributed by Junping Du)
+
+    YARN-3015. yarn classpath command should support same options as hadoop
+    classpath. (Contributed by Varun Saxena)
+
+    YARN-2933. Capacity Scheduler preemption policy should only consider capacity 
+    without labels temporarily. (Mayank Bansal via wangda)
 
 Release 2.6.0 - 2014-11-18
 

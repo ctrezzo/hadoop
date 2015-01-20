@@ -133,6 +133,13 @@ Trunk (Unreleased)
     type instead of concrete classes Block and ReplicaInfo.  (David Powell
     and Joe Pallas via szetszwo)
 
+    HDFS-7591. hdfs classpath command should support same options as hadoop
+    classpath (Varun Saxena via Arpit Agarwal)
+
+    HDFS-5631. Change BlockMetadataHeader.readHeader(..), ChunkChecksum
+    class and constructor to public; and fix FsDatasetSpi to use generic type
+    instead of FsVolumeImpl.  (David Powell and Joe Pallas via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -264,6 +271,12 @@ Trunk (Unreleased)
     (Masatake Iwasaki via wheat9)
 
     HDFS-7407. Minor typo in privileged pid/out/log names (aw)
+
+    HDFS-7581. HDFS documentation needs updating post-shell rewrite (aw)
+
+    HDFS-7606. Fix potential NPE in INodeFile.getBlocks(). (Byron Wong via shv)
+
+    HDFS-7638: Small fix and few refinements for FSN#truncate. (yliu)
 
 Release 2.7.0 - UNRELEASED
 
@@ -510,10 +523,22 @@ Release 2.7.0 - UNRELEASED
     particular namenode in a federated cluster with multiple namenodes
     can be specified in the path parameter.  (szetszwo)
 
+    HDFS-7457. DatanodeID generates excessive garbage. (daryn via kihwal)
+
+    HDFS-7189. Add trace spans for DFSClient metadata operations. (Colin P.
+    McCabe via yliu)
+
+    HDFS-7573. Consolidate the implementation of delete() into a single class.
+    (wheat9)
+
+    HDFS-7640. Print NFS Client in the NFS log. (Brandon Li via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-7454. Reduce memory footprint for AclEntries in NameNode.
     (Vinayakumar B via wheat9)
+
+    HDFS-7615. Remove longReadLock (kihwal)
 
   BUG FIXES
 
@@ -701,6 +726,14 @@ Release 2.7.0 - UNRELEASED
 
     HDFS-7585. Get TestEnhancedByteBufferAccess working on CPU architectures
     with page sizes other than 4096 (Sam Liu via Colin P. McCabe)
+
+    HDFS-7635. Remove TestCorruptFilesJsp from branch-2. (cnauroth)
+
+    HDFS-7632. MiniDFSCluster configures DataNode data directories incorrectly if
+    using more than 1 DataNode and more than 2 storage locations per DataNode.
+    (cnauroth)
+
+    HDFS-7637. Fix the check condition for reserved path. (Yi Liu via jing9)
 
 Release 2.6.1 - UNRELEASED
 
