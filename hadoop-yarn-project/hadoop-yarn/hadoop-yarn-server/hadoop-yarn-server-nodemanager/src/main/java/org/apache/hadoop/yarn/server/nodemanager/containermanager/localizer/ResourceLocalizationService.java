@@ -491,11 +491,11 @@ public class ResourceLocalizationService extends CompositeService
       rsrcReqs.getRequestedResources();
     for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
          rsrcs.entrySet()) {
-      LocalResourcesTracker tracker =
-          getLocalResourcesTracker(e.getKey(), c.getUser(),
-              c.getContainerId().getApplicationAttemptId()
-                  .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
+        LocalResourcesTracker tracker =
+            getLocalResourcesTracker(req.getVisibility(), c.getUser(), c
+                .getContainerId().getApplicationAttemptId().getApplicationId(),
+                req.getShouldBeUploadedToSharedCache());
         tracker.handle(new ResourceRequestEvent(req, e.getKey(), ctxt));
         if (LOG.isDebugEnabled()) {
           LOG.debug("Localizing " + req.getPath() +
@@ -542,10 +542,11 @@ public class ResourceLocalizationService extends CompositeService
       rsrcCleanup.getResources();
     for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
          rsrcs.entrySet()) {
-      LocalResourcesTracker tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
-          c.getContainerId().getApplicationAttemptId()
-          .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
+        LocalResourcesTracker tracker =
+            getLocalResourcesTracker(req.getVisibility(), c.getUser(), c
+                .getContainerId().getApplicationAttemptId().getApplicationId(),
+                req.getShouldBeUploadedToSharedCache());
         tracker.handle(new ResourceReleaseEvent(req,
             c.getContainerId()));
       }
@@ -652,7 +653,8 @@ public class ResourceLocalizationService extends CompositeService
 
 
   LocalResourcesTracker getLocalResourcesTracker(
-      LocalResourceVisibility visibility, String user, ApplicationId appId) {
+      LocalResourceVisibility visibility, String user, ApplicationId appId,
+      boolean uploadToSharedCache) {
     switch (visibility) {
       default:
       case PUBLIC:
@@ -1063,8 +1065,8 @@ public class ResourceLocalizationService extends CompositeService
           case FETCH_SUCCESS:
             // notify resource
             try {
-            getLocalResourcesTracker(req.getVisibility(), user, applicationId)
-              .handle(
+            getLocalResourcesTracker(req.getVisibility(), user, applicationId,
+                req.getShouldBeUploadedToSharedCache()).handle(
                 new ResourceLocalizedEvent(req, stat.getLocalPath().toPath(),
                     stat.getLocalSize()));
             } catch (URISyntaxException e) { }
@@ -1080,7 +1082,8 @@ public class ResourceLocalizationService extends CompositeService
             final String diagnostics = stat.getException().toString();
             LOG.warn(req + " failed: " + diagnostics);
             fetchFailed = true;
-            getLocalResourcesTracker(req.getVisibility(), user, applicationId)
+            getLocalResourcesTracker(req.getVisibility(), user, applicationId,
+              req.getShouldBeUploadedToSharedCache())
               .handle(new ResourceFailedLocalizationEvent(
                   req, diagnostics));
 
@@ -1092,7 +1095,8 @@ public class ResourceLocalizationService extends CompositeService
           default:
             LOG.info("Unknown status: " + stat.getStatus());
             fetchFailed = true;
-            getLocalResourcesTracker(req.getVisibility(), user, applicationId)
+            getLocalResourcesTracker(req.getVisibility(), user, applicationId,
+              req.getShouldBeUploadedToSharedCache())
               .handle(new ResourceFailedLocalizationEvent(
                   req, stat.getException().getMessage()));
             break;
@@ -1143,7 +1147,8 @@ public class ResourceLocalizationService extends CompositeService
           context.getContainerId().getApplicationAttemptId().getApplicationId();
       LocalResourceVisibility vis = rsrc.getVisibility();
       LocalResourcesTracker tracker =
-          getLocalResourcesTracker(vis, user, appId);
+          getLocalResourcesTracker(vis, user, appId,
+              rsrc.getShouldBeUploadedToSharedCache());
       String cacheDirectory = null;
       if (vis == LocalResourceVisibility.PRIVATE) {// PRIVATE Only
         cacheDirectory = getUserFileCachePath(user);

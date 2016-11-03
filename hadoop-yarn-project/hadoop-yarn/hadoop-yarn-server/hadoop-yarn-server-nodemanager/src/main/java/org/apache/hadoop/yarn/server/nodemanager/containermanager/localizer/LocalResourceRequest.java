@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 public class LocalResourceRequest
     extends LocalResource implements Comparable<LocalResourceRequest> {
@@ -35,6 +34,7 @@ public class LocalResourceRequest
   private final LocalResourceType type;
   private final LocalResourceVisibility visibility;
   private final String pattern;
+  private final boolean uploadToSharedCache;
 
   /**
    * Wrap API resource to match against cache of localized resources.
@@ -43,20 +43,25 @@ public class LocalResourceRequest
    */
   public LocalResourceRequest(LocalResource resource)
       throws URISyntaxException {
-    this(resource.getResource().toPath(),
-        resource.getTimestamp(),
-        resource.getType(),
-        resource.getVisibility(),
-        resource.getPattern());
+    this(resource.getResource().toPath(), resource.getTimestamp(), resource
+        .getType(), resource.getVisibility(), resource.getPattern(), resource
+        .getShouldBeUploadedToSharedCache());
   }
 
   LocalResourceRequest(Path loc, long timestamp, LocalResourceType type,
       LocalResourceVisibility visibility, String pattern) {
+    this(loc, timestamp, type, visibility, pattern, false);
+  }
+
+  LocalResourceRequest(Path loc, long timestamp, LocalResourceType type,
+      LocalResourceVisibility visibility, String pattern,
+      boolean shouldBeUploadedToSharedCache) {
     this.loc = loc;
     this.timestamp = timestamp;
     this.type = type;
     this.visibility = visibility;
     this.pattern = pattern;
+    this.uploadToSharedCache = shouldBeUploadedToSharedCache;
   }
 
   @Override
@@ -153,7 +158,7 @@ public class LocalResourceRequest
   
   @Override
   public boolean getShouldBeUploadedToSharedCache() {
-    throw new UnsupportedOperationException();
+    return uploadToSharedCache;
   }
 
   @Override

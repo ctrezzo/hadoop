@@ -382,13 +382,13 @@ public class TestResourceLocalizationService {
       //Get a handle on the trackers after they're setup with INIT_APP_RESOURCES
       LocalResourcesTracker appTracker =
           spyService.getLocalResourcesTracker(
-              LocalResourceVisibility.APPLICATION, user, appId);
+              LocalResourceVisibility.APPLICATION, user, appId, false);
       LocalResourcesTracker privTracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PRIVATE,
-              user, appId);
+              user, appId, false);
       LocalResourcesTracker pubTracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
-              user, appId);
+              user, appId, false);
 
       // init container.
       final Container c = getMockContainer(appId, 42, user);
@@ -559,16 +559,16 @@ public class TestResourceLocalizationService {
       //Get a handle on the trackers after they're setup with INIT_APP_RESOURCES
       LocalResourcesTracker appTracker1 =
           spyService.getLocalResourcesTracker(
-              LocalResourceVisibility.APPLICATION, user1, appId1);
+              LocalResourceVisibility.APPLICATION, user1, appId1, false);
       LocalResourcesTracker privTracker1 =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PRIVATE,
-              user1, null);
+              user1, null, false);
       LocalResourcesTracker appTracker2 =
           spyService.getLocalResourcesTracker(
-              LocalResourceVisibility.APPLICATION, user2, appId2);
+              LocalResourceVisibility.APPLICATION, user2, appId2, false);
       LocalResourcesTracker pubTracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
-              null, null);
+              null, null, false);
 
       // init containers
       final Container c1 = getMockContainer(appId1, 1, user1);
@@ -696,13 +696,15 @@ public class TestResourceLocalizationService {
       dispatcher.await();
 
       appTracker1 = spyService.getLocalResourcesTracker(
-              LocalResourceVisibility.APPLICATION, user1, appId1);
-      privTracker1 = spyService.getLocalResourcesTracker(
-          LocalResourceVisibility.PRIVATE, user1, null);
+              LocalResourceVisibility.APPLICATION, user1, appId1, false);
+      privTracker1 =
+          spyService.getLocalResourcesTracker(LocalResourceVisibility.PRIVATE,
+              user1, null, false);
       appTracker2 = spyService.getLocalResourcesTracker(
-              LocalResourceVisibility.APPLICATION, user2, appId2);
-      pubTracker = spyService.getLocalResourcesTracker(
-          LocalResourceVisibility.PUBLIC, null, null);
+              LocalResourceVisibility.APPLICATION, user2, appId2, false);
+      pubTracker =
+          spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
+              null, null, false);
 
       LocalizedResource recoveredRsrc =
           privTracker1.getLocalizedResource(privReq1);
@@ -1340,8 +1342,9 @@ public class TestResourceLocalizationService {
       verify(delService).delete(eq(user),
           (Path) eq(null), argThat(new DownloadingPathsMatcher(paths)));
 
-      LocalResourcesTracker tracker = spyService.getLocalResourcesTracker(
-          LocalResourceVisibility.PRIVATE, "user0", appId);
+      LocalResourcesTracker tracker =
+          spyService.getLocalResourcesTracker(LocalResourceVisibility.PRIVATE,
+              "user0", appId, false);
       // Container c1 was killed but this resource was localized before kill
       // hence its not removed despite ref cnt being 0.
       LocalizedResource rsrc1 = tracker.getLocalizedResource(req1);
@@ -1665,7 +1668,7 @@ public class TestResourceLocalizationService {
       dispatcher.await();
       LocalResourcesTracker tracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
-            user, appId);
+              user, appId, false);
       Assert.assertNull(tracker.getLocalizedResource(pubReq));
 
       // test IllegalArgumentException
@@ -1691,7 +1694,7 @@ public class TestResourceLocalizationService {
       dispatcher.await();
       tracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
-          user, appId);
+              user, appId, false);
       Assert.assertNull(tracker.getLocalizedResource(pubReq));
 
       // test RejectedExecutionException by shutting down the thread pool
@@ -1702,7 +1705,7 @@ public class TestResourceLocalizationService {
       dispatcher.await();
       tracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
-            user, appId);
+              user, appId, false);
       Assert.assertNull(tracker.getLocalizedResource(pubReq));
 
     } finally {
@@ -1799,7 +1802,7 @@ public class TestResourceLocalizationService {
       // Retrieving localized resource.
       LocalResourcesTracker tracker =
           rls.getLocalResourcesTracker(LocalResourceVisibility.PRIVATE, user,
-            appId);
+              appId, false);
       LocalizedResource lr = tracker.getLocalizedResource(req);
       // Resource would now have moved into DOWNLOADING state
       Assert.assertEquals(ResourceState.DOWNLOADING, lr.getState());
@@ -2136,7 +2139,7 @@ public class TestResourceLocalizationService {
           new ResourceFailedLocalizationEvent(
               req,new Exception("test").toString());
       spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC, user,
-        null).handle(locFailedEvent);
+          null, false).handle(locFailedEvent);
 
       // Waiting for resource to change into FAILED state.
       Assert.assertTrue(waitForResourceState(lr, spyService, req,
@@ -2247,7 +2250,8 @@ public class TestResourceLocalizationService {
   private LocalizedResource getLocalizedResource(
       ResourceLocalizationService service, LocalResourceRequest req,
       LocalResourceVisibility vis, String user, ApplicationId appId) {
-    return service.getLocalResourcesTracker(vis, user, appId)
+    return service.getLocalResourcesTracker(vis, user, appId,
+        req.getShouldBeUploadedToSharedCache())
       .getLocalizedResource(req);
   }
 
@@ -2259,7 +2263,9 @@ public class TestResourceLocalizationService {
     // checking tracker is created
     do {
       if (tracker == null) {
-        tracker = service.getLocalResourcesTracker(vis, user, appId);
+        tracker =
+            service.getLocalResourcesTracker(vis, user, appId,
+                req.getShouldBeUploadedToSharedCache());
       }
       if (tracker != null && lr == null) {
         lr = tracker.getLocalizedResource(req);
@@ -2503,13 +2509,13 @@ public class TestResourceLocalizationService {
       // INIT_APP_RESOURCES
       LocalResourcesTracker appTracker =
           spyService.getLocalResourcesTracker(
-            LocalResourceVisibility.APPLICATION, user, appId);
+              LocalResourceVisibility.APPLICATION, user, appId, false);
       LocalResourcesTracker privTracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PRIVATE,
-            user, appId);
+              user, appId, false);
       LocalResourcesTracker pubTracker =
           spyService.getLocalResourcesTracker(LocalResourceVisibility.PUBLIC,
-            user, appId);
+              user, appId, false);
 
       // init resources
       Random r = new Random();
