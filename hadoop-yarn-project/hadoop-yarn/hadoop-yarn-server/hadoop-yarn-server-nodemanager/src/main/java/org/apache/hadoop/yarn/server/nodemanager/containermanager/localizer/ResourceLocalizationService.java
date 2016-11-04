@@ -169,6 +169,9 @@ public class ResourceLocalizationService extends CompositeService
   @VisibleForTesting
   LocalResourcesTracker publicRsrc;
 
+  /** A local resource tracker for shared cache staging resources **/
+  private LocalResourcesTracker scsRsrc;
+
   private LocalDirsHandlerService dirsHandler;
   private DirsChangeListener localDirsChangeListener;
   private DirsChangeListener logDirsChangeListener;
@@ -238,6 +241,9 @@ public class ResourceLocalizationService extends CompositeService
     this.validateConf(conf);
     this.publicRsrc = new LocalResourcesTrackerImpl(null, null, dispatcher,
         true, conf, stateStore, dirsHandler);
+    this.scsRsrc =
+        new LocalResourcesTrackerImpl(null, null, dispatcher, true, conf,
+            stateStore, dirsHandler);
     this.recordFactory = RecordFactoryProvider.getRecordFactory(conf);
 
     try {
@@ -658,7 +664,11 @@ public class ResourceLocalizationService extends CompositeService
     switch (visibility) {
       default:
       case PUBLIC:
-        return publicRsrc;
+        if(uploadToSharedCache) {
+          return scsRsrc;
+        } else {
+          return publicRsrc;
+        }
       case PRIVATE:
         return privateRsrc.get(user);
       case APPLICATION:
@@ -844,7 +854,12 @@ public class ResourceLocalizationService extends CompositeService
       // TODO handle failures, cancellation, requests by other containers
       LocalizedResource rsrc = request.getResource();
       LocalResourceRequest key = rsrc.getRequest();
-      LOG.info("Downloading public rsrc:" + key);
+      boolean uploadToSharedCache = key.getShouldBeUploadedToSharedCache();
+      LocalResourcesTracker tracker =
+          uploadToSharedCache ? scsRsrc : publicRsrc;
+      String trackerName =
+          uploadToSharedCache ? "shared cache staging" : "public";
+      LOG.info("Downloading " + trackerName + " rsrc:" + key);
       /*
        * Here multiple containers may request the same resource. So we need
        * to start downloading only when
@@ -858,17 +873,24 @@ public class ResourceLocalizationService extends CompositeService
         if (rsrc.getState() == ResourceState.DOWNLOADING) {
           LocalResource resource = request.getResource().getRequest();
           try {
-            Path publicRootPath =
-                dirsHandler.getLocalPathForWrite("." + Path.SEPARATOR
-                    + ContainerLocalizer.FILECACHE,
-                  ContainerLocalizer.getEstimatedSize(resource), true);
-            Path publicDirDestPath =
-                publicRsrc.getPathForLocalization(key, publicRootPath,
-                    delService);
-            if (!publicDirDestPath.getParent().equals(publicRootPath)) {
+            Path rootPath;
+            if (uploadToSharedCache) {
+              rootPath =
+                  dirsHandler.getLocalPathForWrite("." + Path.SEPARATOR
+                      + ContainerLocalizer.SCSCACHE,
+                      ContainerLocalizer.getEstimatedSize(resource), true);
+            } else {
+              rootPath =
+                  dirsHandler.getLocalPathForWrite("." + Path.SEPARATOR
+                      + ContainerLocalizer.FILECACHE,
+                      ContainerLocalizer.getEstimatedSize(resource), true);
+            }
+            Path dirDestPath =
+                tracker.getPathForLocalization(key, rootPath, delService);
+            if (!dirDestPath.getParent().equals(rootPath)) {
               if (diskValidator != null) {
-                diskValidator.checkStatus(
-                    new File(publicDirDestPath.toUri().getPath()));
+                diskValidator.checkStatus(new File(dirDestPath.toUri()
+                    .getPath()));
               } else {
                 throw new DiskChecker.DiskErrorException(
                     "Disk Validator is null!");
@@ -879,25 +901,27 @@ public class ResourceLocalizationService extends CompositeService
             // completing and being dequeued before pending updated
             synchronized (pending) {
               pending.put(queue.submit(new FSDownload(lfs, null, conf,
-                  publicDirDestPath, resource, request.getContext().getStatCache())),
+                  dirDestPath, resource, request.getContext().getStatCache())),
                   request);
             }
           } catch (IOException e) {
             rsrc.unlock();
-            publicRsrc.handle(new ResourceFailedLocalizationEvent(request
+            tracker.handle(new ResourceFailedLocalizationEvent(request
               .getResource().getRequest(), e.getMessage()));
-            LOG.error("Local path for public localization is not found. "
+            LOG.error("Local path for " + trackerName
+                + " localization is not found. "
                 + " May be disks failed.", e);
           } catch (IllegalArgumentException ie) {
             rsrc.unlock();
-            publicRsrc.handle(new ResourceFailedLocalizationEvent(request
+            tracker.handle(new ResourceFailedLocalizationEvent(request
                 .getResource().getRequest(), ie.getMessage()));
-            LOG.error("Local path for public localization is not found. "
+            LOG.error("Local path for " + trackerName
+                + " localization is not found. "
                 + " Incorrect path. " + request.getResource().getRequest()
                 .getPath(), ie);
           } catch (RejectedExecutionException re) {
             rsrc.unlock();
-            publicRsrc.handle(new ResourceFailedLocalizationEvent(request
+            tracker.handle(new ResourceFailedLocalizationEvent(request
               .getResource().getRequest(), re.getMessage()));
             LOG.error("Failed to submit rsrc " + rsrc + " for download."
                 + " Either queue is full or threadpool is shutdown.", re);
@@ -916,22 +940,23 @@ public class ResourceLocalizationService extends CompositeService
           try {
             Future<Path> completed = queue.take();
             LocalizerResourceRequestEvent assoc = pending.remove(completed);
+            if (null == assoc) {
+              LOG.error("Localized unknown resource to " + completed);
+              // TODO delete
+              return;
+            }
+            LocalResourceRequest req = assoc.getResource().getRequest();
+            LocalResourcesTracker tracker =
+                req.getShouldBeUploadedToSharedCache() ? scsRsrc : publicRsrc;
             try {
-              if (null == assoc) {
-                LOG.error("Localized unknown resource to " + completed);
-                // TODO delete
-                return;
-              }
               Path local = completed.get();
-              LocalResourceRequest key = assoc.getResource().getRequest();
-              publicRsrc.handle(new ResourceLocalizedEvent(key, local, FileUtil
+              tracker.handle(new ResourceLocalizedEvent(req, local, FileUtil
                 .getDU(new File(local.toUri()))));
               assoc.getResource().unlock();
             } catch (ExecutionException e) {
               LOG.info("Failed to download resource " + assoc.getResource(),
                   e.getCause());
-              LocalResourceRequest req = assoc.getResource().getRequest();
-              publicRsrc.handle(new ResourceFailedLocalizationEvent(req,
+              tracker.handle(new ResourceFailedLocalizationEvent(req,
                   e.getMessage()));
               assoc.getResource().unlock();
             } catch (CancellationException e) {

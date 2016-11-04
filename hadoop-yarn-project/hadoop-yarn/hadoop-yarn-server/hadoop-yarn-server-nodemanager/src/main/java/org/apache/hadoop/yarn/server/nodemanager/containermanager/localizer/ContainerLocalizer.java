@@ -82,6 +82,7 @@ public class ContainerLocalizer {
   public static final String FILECACHE = "filecache";
   public static final String APPCACHE = "appcache";
   public static final String USERCACHE = "usercache";
+  public static final String SCSCACHE = "scscache";
   public static final String OUTPUTDIR = "output";
   public static final String TOKEN_FILE_NAME_FMT = "%s.tokens";
   public static final String WORKDIR = "work";
