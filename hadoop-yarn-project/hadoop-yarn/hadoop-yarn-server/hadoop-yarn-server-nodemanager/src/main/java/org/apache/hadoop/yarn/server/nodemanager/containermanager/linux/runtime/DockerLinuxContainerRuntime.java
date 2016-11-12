@@ -430,6 +430,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     @SuppressWarnings("unchecked")
     List<String> filecacheDirs = ctx.getExecutionAttribute(FILECACHE_DIRS);
     @SuppressWarnings("unchecked")
+    List<String> scsCacheDirs = ctx.getExecutionAttribute(SCSCACHE_DIRS);
+    @SuppressWarnings("unchecked")
     List<String> containerLocalDirs = ctx.getExecutionAttribute(
         CONTAINER_LOCAL_DIRS);
     @SuppressWarnings("unchecked")
@@ -457,6 +459,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     List<String> allDirs = new ArrayList<>(containerLocalDirs);
 
     allDirs.addAll(filecacheDirs);
+    allDirs.addAll(scsCacheDirs);
     allDirs.add(containerWorkDir.toString());
     allDirs.addAll(containerLogDirs);
     allDirs.addAll(userLocalDirs);

@@ -230,6 +230,7 @@ public class ContainerLaunch implements Callable<Integer> {
       List<String> localDirs = dirsHandler.getLocalDirs();
       List<String> logDirs = dirsHandler.getLogDirs();
       List<String> filecacheDirs = getNMFilecacheDirs(localDirs);
+      List<String> scsCacheDirs = getSCSCacheDirs(localDirs);
       List<String> userLocalDirs = getUserLocalDirs(localDirs);
       List<String> containerLocalDirs = getContainerLocalDirs(localDirs);
       List<String> containerLogDirs = getContainerLogDirs(logDirs);
@@ -292,6 +293,7 @@ public class ContainerLaunch implements Callable<Integer> {
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
           .setFilecacheDirs(filecacheDirs)
+          .setScsCacheDirs(scsCacheDirs)
           .setUserLocalDirs(userLocalDirs)
           .setContainerLocalDirs(containerLocalDirs)
           .setContainerLogDirs(containerLogDirs)
@@ -384,6 +386,19 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     return filecacheDirs;
+  }
+
+  protected List<String> getSCSCacheDirs(List<String> localDirs) {
+    List<String> scsCacheDirs = new ArrayList<>(localDirs.size());
+
+    for (String localDir : localDirs) {
+      String scsCacheDir =
+          localDir + Path.SEPARATOR + ContainerLocalizer.SCSCACHE;
+
+      scsCacheDirs.add(scsCacheDir);
+    }
+
+    return scsCacheDirs;
   }
 
 
