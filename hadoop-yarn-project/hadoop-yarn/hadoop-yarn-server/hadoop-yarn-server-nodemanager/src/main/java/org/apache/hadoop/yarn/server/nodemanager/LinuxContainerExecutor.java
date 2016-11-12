@@ -373,6 +373,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     List<String> localDirs = ctx.getLocalDirs();
     List<String> logDirs = ctx.getLogDirs();
     List<String> filecacheDirs = ctx.getFilecacheDirs();
+    List<String> scsCacheDirs = ctx.getScsCacheDirs();
     List<String> userLocalDirs = ctx.getUserLocalDirs();
     List<String> containerLocalDirs = ctx.getContainerLocalDirs();
     List<String> containerLogDirs = ctx.getContainerLogDirs();
@@ -460,6 +461,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             .setExecutionAttribute(LOCAL_DIRS, localDirs)
             .setExecutionAttribute(LOG_DIRS, logDirs)
             .setExecutionAttribute(FILECACHE_DIRS, filecacheDirs)
+            .setExecutionAttribute(SCSCACHE_DIRS, scsCacheDirs)
             .setExecutionAttribute(USER_LOCAL_DIRS, userLocalDirs)
             .setExecutionAttribute(CONTAINER_LOCAL_DIRS, containerLocalDirs)
             .setExecutionAttribute(CONTAINER_LOG_DIRS, containerLogDirs)

@@ -46,6 +46,7 @@ public final class ContainerStartContext {
   private final List<String> localDirs;
   private final List<String> logDirs;
   private final List<String> filecacheDirs;
+  private final List<String> scsCacheDirs;
   private final List<String> userLocalDirs;
   private final List<String> containerLocalDirs;
   private final List<String> containerLogDirs;
@@ -61,6 +62,7 @@ public final class ContainerStartContext {
     private List<String> localDirs;
     private List<String> logDirs;
     private List<String> filecacheDirs;
+    private List<String> scsCacheDirs;
     private List<String> userLocalDirs;
     private List<String> containerLocalDirs;
     private List<String> containerLogDirs;
@@ -120,6 +122,11 @@ public final class ContainerStartContext {
       return this;
     }
 
+    public Builder setScsCacheDirs(List<String> scsCacheDirs) {
+      this.scsCacheDirs = scsCacheDirs;
+      return this;
+    }
+
     public Builder setUserLocalDirs(List<String> userLocalDirs) {
       this.userLocalDirs = userLocalDirs;
       return this;
@@ -151,6 +158,7 @@ public final class ContainerStartContext {
     this.localDirs = builder.localDirs;
     this.logDirs = builder.logDirs;
     this.filecacheDirs = builder.filecacheDirs;
+    this.scsCacheDirs = builder.scsCacheDirs;
     this.userLocalDirs = builder.userLocalDirs;
     this.containerLocalDirs = builder.containerLocalDirs;
     this.containerLogDirs = builder.containerLogDirs;
@@ -198,6 +206,10 @@ public final class ContainerStartContext {
 
   public List<String> getFilecacheDirs() {
     return Collections.unmodifiableList(this.filecacheDirs);
+  }
+
+  public List<String> getScsCacheDirs() {
+    return Collections.unmodifiableList(this.scsCacheDirs);
   }
 
   public List<String> getUserLocalDirs() {

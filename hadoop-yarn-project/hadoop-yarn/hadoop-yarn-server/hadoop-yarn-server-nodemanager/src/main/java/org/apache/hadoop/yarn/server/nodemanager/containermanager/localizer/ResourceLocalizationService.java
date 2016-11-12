@@ -1488,6 +1488,8 @@ public class ResourceLocalizationService extends CompositeService
       currentTimeStamp);
     renameLocalDir(lfs, localDir, ContainerLocalizer.FILECACHE,
       currentTimeStamp);
+    renameLocalDir(lfs, localDir, ContainerLocalizer.SCSCACHE,
+        currentTimeStamp);
     renameLocalDir(lfs, localDir, ResourceLocalizationService.NM_PRIVATE_DIR,
       currentTimeStamp);
     try {
@@ -1525,10 +1527,13 @@ public class ResourceLocalizationService extends CompositeService
             LOG.info("usercache path : " + status.getPath().toString());
             cleanUpFilesPerUserDir(lfs, del, status.getPath());
           } else if (status.getPath().getName()
-              .matches(".*" + NM_PRIVATE_DIR + "_DEL_.*")
-              ||
-              status.getPath().getName()
-                  .matches(".*" + ContainerLocalizer.FILECACHE + "_DEL_.*")) {
+              .matches(".*" + NM_PRIVATE_DIR + "_DEL_.*")) {
+            del.delete(null, status.getPath(), new Path[] {});
+          } else if (status.getPath().getName()
+              .matches(".*" + ContainerLocalizer.FILECACHE + "_DEL_.*")) {
+            del.delete(null, status.getPath(), new Path[] {});
+          } else if (status.getPath().getName()
+              .matches(".*" + ContainerLocalizer.SCSCACHE + "_DEL_.*")) {
             del.delete(null, status.getPath(), new Path[] {});
           }
         } catch (IOException ex) {
@@ -1632,10 +1637,12 @@ public class ResourceLocalizationService extends CompositeService
 
     Path userDir = new Path(localDir, ContainerLocalizer.USERCACHE);
     Path fileDir = new Path(localDir, ContainerLocalizer.FILECACHE);
+    Path scsDir = new Path(localDir, ContainerLocalizer.SCSCACHE);
     Path sysDir = new Path(localDir, NM_PRIVATE_DIR);
 
     localDirPathFsPermissionsMap.put(userDir, defaultPermission);
     localDirPathFsPermissionsMap.put(fileDir, defaultPermission);
+    localDirPathFsPermissionsMap.put(scsDir, defaultPermission);
     localDirPathFsPermissionsMap.put(sysDir, nmPrivatePermission);
     return localDirPathFsPermissionsMap;
   }
