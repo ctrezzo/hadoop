@@ -1086,7 +1086,8 @@ public class ResourceLocalizationService extends CompositeService
           continue;
         }
         LocalResourcesTracker tracker =
-            getLocalResourcesTracker(req.getVisibility(), user, applicationId, req.getShouldBeUploadedToSharedCache());
+            getLocalResourcesTracker(req.getVisibility(), user, applicationId,
+                req.getShouldBeUploadedToSharedCache());
         if (tracker == null) {
           // This is likely due to a race between heartbeat and
           // app cleaning up.
