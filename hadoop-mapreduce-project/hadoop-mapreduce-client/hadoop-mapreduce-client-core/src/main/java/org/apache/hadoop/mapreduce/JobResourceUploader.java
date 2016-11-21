@@ -27,8 +27,8 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,30 +37,87 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.client.api.SharedCacheClient;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import com.google.common.annotations.VisibleForTesting;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+/**
+ * This class is responsible for uploading resources from the client to HDFS
+ * that are associated with a MapReduce job.
+ */
+@Private
+@Unstable
 class JobResourceUploader {
   protected static final Log LOG = LogFactory.getLog(JobResourceUploader.class);
   private final boolean useWildcard;
   private final FileSystem jtFs;
+  private SharedCacheClient scClient = null;
+  private SharedCacheConfig scConfig = new SharedCacheConfig();
+  private ApplicationId appId = null;
 
   JobResourceUploader(FileSystem submitFs, boolean useWildcard) {
     this.jtFs = submitFs;
     this.useWildcard = useWildcard;
   }
 
+  private void initSharedCache(JobID jobid, Configuration conf) {
+    this.scConfig.init(conf);
+    if (this.scConfig.isSharedCacheEnabled()) {
+      this.scClient = createSharedCacheClient(conf);
+      appId = ApplicationId.fromString(jobid.getJtIdentifier());
+    }
+  }
+
+  private void stopSharedCache() {
+    if (scClient != null) {
+      scClient.stop();
+      scClient = null;
+    }
+  }
+
+  /**
+   * Create, initialize and start a new shared cache client.
+   */
+  @VisibleForTesting
+  protected SharedCacheClient createSharedCacheClient(Configuration conf) {
+    SharedCacheClient scc = SharedCacheClient.createSharedCacheClient();
+    scc.init(conf);
+    scc.start();
+    return scc;
+  }
+
   /**
    * Upload and configure files, libjars, jobjars, and archives pertaining to
    * the passed job.
-   * 
+   * <p>
+   * This client will use the shared cache for libjars, files, archives and
+   * jobjars if it is enabled. When shared cache is enabled, it will try to use
+   * the shared cache and fall back to the default behavior when the scm isn't
+   * available.
+   * <p>
+   * 1. For the resources that have been successfully shared, we will continue
+   * to use them in a shared fashion.
+   * <p>
+   * 2. For the resources that weren't in the cache and need to be uploaded by
+   * NM, we won't ask NM to upload them.
+   *
    * @param job the job containing the files to be uploaded
    * @param submitJobDir the submission directory of the job
    * @throws IOException
    */
   public void uploadResources(Job job, Path submitJobDir) throws IOException {
+    try {
+      initSharedCache(job.getJobID(), job.getConfiguration());
+      uploadResourcesInternal(job, submitJobDir);
+    } finally {
+      stopSharedCache();
+    }
+  }
+
+  private void uploadResourcesInternal(Job job, Path submitJobDir)
+      throws IOException {
     Configuration conf = job.getConfiguration();
     short replication =
         (short) conf.getInt(Job.SUBMIT_REPLICATION,
@@ -87,6 +144,7 @@ class JobResourceUploader {
           + " already exists!! This is unexpected.Please check what's there in"
           + " that directory");
     }
+    // Create the submission directory for the MapReduce job.
     submitJobDir = jtFs.makeQualified(submitJobDir);
     submitJobDir = new Path(submitJobDir.toUri().getPath());
     FsPermission mapredSysPerms =
@@ -96,16 +154,43 @@ class JobResourceUploader {
     Collection<String> files = conf.getStringCollection("tmpfiles");
     Collection<String> libjars = conf.getStringCollection("tmpjars");
     Collection<String> archives = conf.getStringCollection("tmparchives");
+    Collection<String> dcFiles =
+        conf.getStringCollection(MRJobConfig.CACHE_FILES);
+    Collection<String> dcArchives =
+        conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES);
     String jobJar = job.getJar();
 
-    Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
-    checkLocalizationLimits(conf, files, libjars, archives, jobJar, statCache);
+    // Merge resources that have already been specified for the shared cache
+    // via conf.
+    files.addAll(conf.getStringCollection(MRJobConfig.FILES_FOR_SHARED_CACHE));
+    libjars.addAll(conf.getStringCollection(
+            MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE));
+    archives.addAll(conf
+        .getStringCollection(MRJobConfig.ARCHIVES_FOR_SHARED_CACHE));
 
-    uploadFiles(conf, files, submitJobDir, mapredSysPerms, replication);
-    uploadLibJars(conf, libjars, submitJobDir, mapredSysPerms, replication);
-    uploadArchives(conf, archives, submitJobDir, mapredSysPerms, replication);
+
+    Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
+    checkLocalizationLimits(conf, files, libjars, archives, jobJar, dcFiles,
+        dcArchives, statCache);
+
+    Map<String, Boolean> fileSCUploadPolicies = new HashMap<String, Boolean>();
+    Map<String, Boolean> archiveSCUploadPolicies =
+        new HashMap<String, Boolean>();
+
+    uploadFiles(job, files, submitJobDir, mapredSysPerms, replication,
+        fileSCUploadPolicies, statCache);
+    uploadLibJars(job, libjars, submitJobDir, mapredSysPerms, replication,
+        fileSCUploadPolicies, statCache);
+    uploadArchives(job, archives, submitJobDir, mapredSysPerms, replication,
+        archiveSCUploadPolicies, statCache);
     uploadJobJar(job, jobJar, submitJobDir, replication);
     addLog4jToDistributedCache(job, submitJobDir);
+
+    // Note, we do not consider resources in the distributed cache for the
+    // shared cache at this time. Only resources specified via the
+    // GenericOptionsParser or the jobjar.
+    Job.setFileSharedCacheUploadPolicies(conf, fileSCUploadPolicies);
+    Job.setArchiveSharedCacheUploadPolicies(conf, archiveSCUploadPolicies);
 
     // set the timestamps of the archives and files
     // set the public/private visibility of the archives and files
@@ -116,9 +201,11 @@ class JobResourceUploader {
         job.getCredentials());
   }
 
-  private void uploadFiles(Configuration conf, Collection<String> files,
-      Path submitJobDir, FsPermission mapredSysPerms, short submitReplication)
-      throws IOException {
+  private void uploadFiles(Job job, Collection<String> files,
+      Path submitJobDir, FsPermission mapredSysPerms, short submitReplication,
+      Map<String, Boolean> fileSCUploadPolicies,
+      Map<URI, FileStatus> statCache) throws IOException {
+    Configuration conf = job.getConfiguration();
     Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
     if (!files.isEmpty()) {
       FileSystem.mkdirs(jtFs, filesDir, mapredSysPerms);
@@ -130,10 +217,30 @@ class JobResourceUploader {
           throw new IllegalArgumentException(e);
         }
         Path tmp = new Path(tmpURI);
-        Path newPath = copyRemoteFiles(filesDir, tmp, conf, submitReplication);
+        Path newPath = null;
+        boolean uploadToSharedCache = false;
+        if (scConfig.isSharedCacheFilesEnabled()) {
+          if (getFileStatus(statCache, conf, tmp).isDirectory()) {
+            LOG.warn("Shared cache does not support directories."
+                + " Will not upload " + tmp + " to the shared cache.");
+          } else {
+            newPath = useSharedCache(tmp, conf);
+            if (newPath == null) {
+              uploadToSharedCache = true;
+            }
+          }
+        }
+
+        if (newPath == null) {
+          newPath = copyRemoteFiles(filesDir, tmp, conf, submitReplication);
+        }
+
         try {
           URI pathURI = getPathURI(newPath, tmpURI.getFragment());
-          DistributedCache.addCacheFile(pathURI, conf);
+          job.addCacheFile(pathURI);
+          if (scConfig.isSharedCacheFilesEnabled()) {
+            fileSCUploadPolicies.put(pathURI.toString(), uploadToSharedCache);
+          }
         } catch (URISyntaxException ue) {
           // should not throw a uri exception
           throw new IOException("Failed to create uri for " + tmpFile, ue);
@@ -142,23 +249,51 @@ class JobResourceUploader {
     }
   }
 
-  private void uploadLibJars(Configuration conf, Collection<String> libjars,
-      Path submitJobDir, FsPermission mapredSysPerms, short submitReplication)
+  private void uploadLibJars(Job job, Collection<String> libjars,
+      Path submitJobDir, FsPermission mapredSysPerms, short submitReplication,
+      Map<String, Boolean> fileSCUploadPolicies, Map<URI, FileStatus> statCache)
       throws IOException {
+    Configuration conf = job.getConfiguration();
     Path libjarsDir = JobSubmissionFiles.getJobDistCacheLibjars(submitJobDir);
     if (!libjars.isEmpty()) {
       FileSystem.mkdirs(jtFs, libjarsDir, mapredSysPerms);
+      boolean addIndividualToDistributedCache = !useWildcard;
+      if (scConfig.isSharedCacheLibjarsEnabled()) {
+        // Shared cache does not support wildcards for libjars directory yet
+        addIndividualToDistributedCache = true;
+      }
       for (String tmpjars : libjars) {
         Path tmp = new Path(tmpjars);
-        Path newPath =
-            copyRemoteFiles(libjarsDir, tmp, conf, submitReplication);
+        Path newPath = null;
+        boolean uploadToSharedCache = false;
+        if (scConfig.isSharedCacheLibjarsEnabled()) {
+          if (getFileStatus(statCache, conf, tmp).isDirectory()) {
+            LOG.warn("Shared cache does not support directories."
+                + " Will not upload " + tmp + " to the shared cache.");
+          } else {
+            newPath = useSharedCache(tmp, conf);
+            if (newPath == null) {
+              uploadToSharedCache = true;
+            }
+          }
+        }
+
+        if (newPath == null) {
+          newPath = copyRemoteFiles(libjarsDir, tmp, conf, submitReplication);
+        }
 
         // Add each file to the classpath
-        DistributedCache.addFileToClassPath(
-            new Path(newPath.toUri().getPath()), conf, jtFs, !useWildcard);
+        job.addFileToClassPath(newPath);
+        if (addIndividualToDistributedCache) {
+          job.addCacheFile(newPath.toUri());
+        }
+        if (scConfig.isSharedCacheLibjarsEnabled()) {
+          fileSCUploadPolicies.put(newPath.toUri().toString(),
+              uploadToSharedCache);
+        }
       }
 
-      if (useWildcard) {
+      if (!addIndividualToDistributedCache) {
         // Add the whole directory to the cache
         Path libJarsDirWildcard =
             jtFs.makeQualified(new Path(libjarsDir, DistributedCache.WILDCARD));
@@ -168,9 +303,12 @@ class JobResourceUploader {
     }
   }
 
-  private void uploadArchives(Configuration conf, Collection<String> archives,
-      Path submitJobDir, FsPermission mapredSysPerms, short submitReplication)
+  private void uploadArchives(Job job, Collection<String> archives,
+      Path submitJobDir, FsPermission mapredSysPerms, short submitReplication,
+      Map<String, Boolean> archiveSCUploadPolicies,
+      Map<URI, FileStatus> statCache)
       throws IOException {
+    Configuration conf = job.getConfiguration();
     Path archivesDir = JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
     if (!archives.isEmpty()) {
       FileSystem.mkdirs(jtFs, archivesDir, mapredSysPerms);
@@ -182,11 +320,30 @@ class JobResourceUploader {
           throw new IllegalArgumentException(e);
         }
         Path tmp = new Path(tmpURI);
-        Path newPath =
-            copyRemoteFiles(archivesDir, tmp, conf, submitReplication);
+        Path newPath = null;
+        boolean uploadToSharedCache = false;
+        if (scConfig.isSharedCacheArchivesEnabled()) {
+          if (getFileStatus(statCache, conf, tmp).isDirectory()) {
+            LOG.warn("Shared cache does not support directories."
+                + " Will not upload " + tmp + " to the shared cache.");
+          } else {
+            newPath = useSharedCache(tmp, conf);
+            if (newPath == null) {
+              uploadToSharedCache = true;
+            }
+          }
+        }
+
+        if (newPath == null) {
+          newPath = copyRemoteFiles(archivesDir, tmp, conf, submitReplication);
+        }
         try {
           URI pathURI = getPathURI(newPath, tmpURI.getFragment());
-          DistributedCache.addCacheArchive(pathURI, conf);
+          job.addCacheArchive(pathURI);
+          if (scConfig.isSharedCacheArchivesEnabled()) {
+            archiveSCUploadPolicies
+                .put(pathURI.toString(), uploadToSharedCache);
+          }
         } catch (URISyntaxException ue) {
           // should not throw an uri excpetion
           throw new IOException("Failed to create uri for " + tmpArchives, ue);
@@ -197,19 +354,56 @@ class JobResourceUploader {
 
   private void uploadJobJar(Job job, String jobJar, Path submitJobDir,
       short submitReplication) throws IOException {
+    Configuration conf = job.getConfiguration();
     if (jobJar != null) { // copy jar to JobTracker's fs
       // use jar name if job is not named.
       if ("".equals(job.getJobName())) {
         job.setJobName(new Path(jobJar).getName());
       }
+      if (scConfig.isSharedCacheJobjarEnabled()) {
+        // We want the jobjar to be localized with public visibility on the
+        // node manager so it can be shared.
+        conf.setBoolean(MRJobConfig.JOBJAR_VISIBILITY, true);
+      }
       Path jobJarPath = new Path(jobJar);
       URI jobJarURI = jobJarPath.toUri();
-      // If the job jar is already in a global fs,
-      // we don't need to copy it from local fs
-      if (jobJarURI.getScheme() == null || jobJarURI.getScheme().equals("file")) {
-        copyJar(jobJarPath, JobSubmissionFiles.getJobJar(submitJobDir),
-            submitReplication);
-        job.setJar(JobSubmissionFiles.getJobJar(submitJobDir).toString());
+      Path newJarPath = null;
+      boolean uploadToSharedCache = false;
+      if (jobJarURI.getScheme() == null ||
+          jobJarURI.getScheme().equals("file")) {
+        // job jar is on the local file system
+        if (scConfig.isSharedCacheJobjarEnabled()) {
+          // We must have a qualified path for the shared cache client. We can
+          // assume this is for the local filesystem
+          if (jobJarPath.toUri().getScheme() == null
+              || jobJarPath.toUri().getAuthority() == null) {
+            jobJarPath = FileSystem.getLocal(conf).makeQualified(jobJarPath);
+          }
+          newJarPath = useSharedCache(jobJarPath, conf);
+          if (newJarPath == null) {
+            uploadToSharedCache = true;
+          }
+        }
+        if (newJarPath == null) {
+          newJarPath = JobSubmissionFiles.getJobJar(submitJobDir);
+          copyJar(jobJarPath, newJarPath, submitReplication);
+        }
+      } else {
+        // job jar is in a remote file system
+        if (scConfig.isSharedCacheJobjarEnabled()) {
+          newJarPath = useSharedCache(jobJarPath, conf);
+          if (newJarPath == null) {
+            uploadToSharedCache = true;
+            newJarPath = jobJarPath;
+          }
+        }
+        // we don't need to upload the jobjar to the staging directory because
+        // it is already in an accessible place
+      }
+      job.setJar(jobJarPath.toString());
+      if (scConfig.isSharedCacheJobjarEnabled()) {
+        conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY,
+            uploadToSharedCache);
       }
     } else {
       LOG.warn("No job jar file set.  User classes may not be found. "
@@ -219,11 +413,14 @@ class JobResourceUploader {
 
   /**
    * Verify that the resources this job is going to localize are within the
-   * localization limits.
+   * localization limits. We count all resources towards these limits regardless
+   * of where they are coming from (i.e. local, distributed cache, or shared
+   * cache).
    */
   @VisibleForTesting
   void checkLocalizationLimits(Configuration conf, Collection<String> files,
       Collection<String> libjars, Collection<String> archives, String jobJar,
+      Collection<String> dcFiles, Collection<String> dcArchives,
       Map<URI, FileStatus> statCache) throws IOException {
 
     LimitChecker limitChecker = new LimitChecker(conf);
@@ -231,12 +428,6 @@ class JobResourceUploader {
       // there are no limits set, so we are done.
       return;
     }
-
-    // Get the files and archives that are already in the distributed cache
-    Collection<String> dcFiles =
-        conf.getStringCollection(MRJobConfig.CACHE_FILES);
-    Collection<String> dcArchives =
-        conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES);
 
     for (String path : dcFiles) {
       explorePath(conf, new Path(path), limitChecker, statCache);
@@ -387,6 +578,37 @@ class JobResourceUploader {
     FileUtil.copy(remoteFs, originalPath, jtFs, newPath, false, conf);
     jtFs.setReplication(newPath, replication);
     return newPath;
+  }
+
+  /**
+   * Checksum a local resource file and call use for that resource with the scm.
+   */
+  private Path useSharedCache(Path sourceFile, Configuration conf)
+      throws IOException {
+    if (scClient == null) {
+      return null;
+    }
+    // If for whatever reason, we can't even calculate checksum for
+    // a resource, something is really wrong with the file system;
+    // even non-SCM approach won't work. Let us just throw the exception.
+    String checksum = scClient.getFileChecksum(sourceFile);
+    Path path = null;
+    try {
+      path = scClient.use(this.appId, checksum);
+    } catch (YarnException e) {
+      LOG.warn("Error trying to contact the shared cache manager,"
+          + " disabling the SCMClient for the rest of this job submission", e);
+      /*
+       * If we fail to contact the SCM, we do not use it for the rest of this
+       * JobResourceUploader's life. This prevents us from having to timeout
+       * each time we try to upload a file while the SCM is unavailable. Instead
+       * we timeout/error the first time and quickly revert to the default
+       * behavior without the shared cache. We do this by stopping the shared
+       * cache client and setting it to null.
+       */
+      stopSharedCache();
+    }
+    return path;
   }
 
   private void copyJar(Path originalJarPath, Path submitJarFile,

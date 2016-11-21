@@ -167,6 +167,7 @@ public class TestLocalDistributedCacheManager {
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "101");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "201");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "false");
+    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {
@@ -275,6 +276,7 @@ public class TestLocalDistributedCacheManager {
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "101,101");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "201,201");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "false,false");
+    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true,true");
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {

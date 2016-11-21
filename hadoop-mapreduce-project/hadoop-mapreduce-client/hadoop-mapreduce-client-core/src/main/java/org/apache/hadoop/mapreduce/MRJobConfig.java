@@ -188,6 +188,47 @@ public interface MRJobConfig {
   public static final String CACHE_ARCHIVES_VISIBILITIES = "mapreduce.job.cache.archives.visibilities";
 
   /**
+   * This parameter controls the visibility of the localized job jar on the node
+   * manager. If set to true, the visibility will be set to
+   * LocalResourceVisibility.PUBLIC. If set to false, the visibility will be set
+   * to LocalResourceVisibility.APPLICATION.
+   */
+  public static final String JOBJAR_VISIBILITY =
+      "mapreduce.job.jobjar.visibility";
+  public static final boolean JOBJAR_VISIBILITY_DEFAULT = false;
+
+  public static final String JOBJAR_SHARED_CACHE_UPLOAD_POLICY =
+      "mapreduce.job.jobjar.sharedcache.uploadpolicy";
+  public static final boolean JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT = false;
+
+  public static final String CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES =
+      "mapreduce.job.cache.files.sharedcache.uploadpolicies";
+
+  public static final String CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES =
+      "mapreduce.job.cache.archives.sharedcache.uploadpolicies";
+
+  public static final String FILES_FOR_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.files";
+
+  public static final String FILES_FOR_CLASSPATH_AND_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.files.addtoclasspath";
+
+  public static final String ARCHIVES_FOR_SHARED_CACHE =
+      "mapreduce.job.cache.sharedcache.archives";
+
+  /**
+   * A comma delimited list of resource categories that are enabled for the
+   * shared cache. If a category is enabled, resources in that category will be
+   * uploaded to the shared cache. The valid categories are: jobjar, libjars,
+   * files, archives. If "disabled" is specified then all categories are
+   * disabled. If "enabled" is specified then all categories are enabled.
+   */
+  public static final String SHARED_CACHE_MODE =
+      "mapreduce.job.sharedcache.mode";
+
+  public static final String SHARED_CACHE_MODE_DEFAULT = "disabled";
+
+  /**
    * @deprecated Symlinks are always on and cannot be disabled.
    */
   @Deprecated

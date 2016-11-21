@@ -35,9 +35,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * A class for unit testing JobResourceUploader.
+ * A class for unit testing JobResourceUploader resource limit checking.
  */
-public class TestJobResourceUploader {
+public class TestJobResourceUploaderLimitChecker {
 
   @Test
   public void testAllDefaults() throws IOException {
@@ -163,8 +163,9 @@ public class TestJobResourceUploader {
       uploader.checkLocalizationLimits(conf,
           conf.getStringCollection("tmpfiles"),
           conf.getStringCollection("tmpjars"),
-          conf.getStringCollection("tmparchives"),
-          conf.getJar(), statCache);
+          conf.getStringCollection("tmparchives"), conf.getJar(),
+          conf.getStringCollection(MRJobConfig.CACHE_FILES),
+          conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES), statCache);
       Assert.assertTrue("Limits check succeeded when it should have failed.",
           checkShouldSucceed);
     } catch (IOException e) {

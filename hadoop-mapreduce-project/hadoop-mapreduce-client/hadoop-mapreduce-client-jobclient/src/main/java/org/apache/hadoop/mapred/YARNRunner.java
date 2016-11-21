@@ -317,8 +317,15 @@ public class YARNRunner implements ClientProtocol {
     }
   }
 
-  private LocalResource createApplicationResource(FileContext fs, Path p, LocalResourceType type)
-      throws IOException {
+  private LocalResource createApplicationResource(FileContext fs, Path p,
+      LocalResourceType type) throws IOException {
+    return createApplicationResource(fs, p, type,
+        LocalResourceVisibility.APPLICATION, false);
+  }
+
+  private LocalResource createApplicationResource(FileContext fs, Path p,
+      LocalResourceType type, LocalResourceVisibility viz,
+      Boolean uploadToSharedCache) throws IOException {
     LocalResource rsrc = recordFactory.newRecordInstance(LocalResource.class);
     FileStatus rsrcStat = fs.getFileStatus(p);
     rsrc.setResource(URL.fromPath(fs
@@ -326,7 +333,8 @@ public class YARNRunner implements ClientProtocol {
     rsrc.setSize(rsrcStat.getLen());
     rsrc.setTimestamp(rsrcStat.getModificationTime());
     rsrc.setType(type);
-    rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+    rsrc.setVisibility(viz);
+    rsrc.setShouldBeUploadedToSharedCache(uploadToSharedCache);
     return rsrc;
   }
 
@@ -366,10 +374,16 @@ public class YARNRunner implements ClientProtocol {
             jobConfPath, LocalResourceType.FILE));
     if (jobConf.get(MRJobConfig.JAR) != null) {
       Path jobJarPath = new Path(jobConf.get(MRJobConfig.JAR));
+      LocalResourceVisibility jobJarViz =
+          jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
+              MRJobConfig.JOBJAR_VISIBILITY_DEFAULT) ?
+                  LocalResourceVisibility.PUBLIC
+                  : LocalResourceVisibility.APPLICATION;
       LocalResource rc = createApplicationResource(
-          FileContext.getFileContext(jobJarPath.toUri(), jobConf),
-          jobJarPath,
-          LocalResourceType.PATTERN);
+          FileContext.getFileContext(jobJarPath.toUri(), jobConf), jobJarPath,
+              LocalResourceType.PATTERN, jobJarViz, jobConf.getBoolean(
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY,
+                  MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT));
       String pattern = conf.getPattern(JobContext.JAR_UNPACK_PATTERN, 
           JobConf.UNPACK_JAR_PATTERN_DEFAULT).pattern();
       rc.setPattern(pattern);

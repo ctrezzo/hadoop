@@ -260,7 +260,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
+      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
         "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
@@ -280,7 +280,7 @@ public class TestMRApps {
     }
     String env_str = env.get("CLASSPATH");
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+      Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in"
       + " the classpath!", env_str.contains(expectedClasspath));
@@ -302,7 +302,7 @@ public class TestMRApps {
     assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!",
       cp.contains("PWD"));
     String expectedAppClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
+      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/*",
         "job.jar/classes/", "job.jar/lib/*",
         ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
@@ -331,7 +331,7 @@ public class TestMRApps {
     conf.set(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH, FRAMEWORK_CLASSPATH);
     MRApps.setClasspath(env, conf);
     final String stdClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
-        Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
+        Arrays.asList("job.jar/*", "job.jar/classes/", "job.jar/lib/*",
             ApplicationConstants.Environment.PWD.$$() + "/*"));
     String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
         Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
@@ -380,10 +380,12 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     DistributedCache.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
@@ -412,6 +414,7 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "10,11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "10,11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true,true");
+    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true,true");
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
@@ -439,10 +442,12 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     DistributedCache.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);

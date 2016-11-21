@@ -21,12 +21,18 @@ package org.apache.hadoop.mapreduce;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FileSystem;
@@ -1301,6 +1307,216 @@ public class Job extends JobContextImpl implements JobContext {
         ensureNotSet(REDUCE_CLASS_ATTR, mode);   
       }
     }   
+  }
+
+  /**
+   * Add a file to job config for shared cache processing. If shared cache is
+   * enabled, it will return true, otherwise, return false. We don't check with
+   * SCM here given application might not be able to provide the job id;
+   * ClientSCMProtocol.use requires the application id. Job Submitter will read
+   * the files from job config and take care of things.
+   *
+   * @param resource The resource that Job Submitter will process later using
+   *          shared cache.
+   * @param conf Configuration to add the resource to
+   * @return whether the resource has been added to the configuration
+   */
+  @Unstable
+  public static boolean addFileToSharedCache(URI resource, Configuration conf) {
+    SharedCacheConfig scConfig = new SharedCacheConfig();
+    scConfig.init(conf);
+    if (scConfig.isSharedCacheFilesEnabled()) {
+      String files = conf.get(MRJobConfig.FILES_FOR_SHARED_CACHE);
+      conf.set(
+          MRJobConfig.FILES_FOR_SHARED_CACHE,
+          files == null ? resource.toString() : files + ","
+              + resource.toString());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Add a file to job config for shared cache processing. If shared cache is
+   * enabled, it will return true, otherwise, return false. We don't check with
+   * SCM here given application might not be able to provide the job id;
+   * ClientSCMProtocol.use requires the application id. Job Submitter will read
+   * the files from job config and take care of things. Job Submitter will also
+   * add the file to classpath. Intended to be used by user code.
+   *
+   * @param resource The resource that Job Submitter will process later using
+   *          shared cache.
+   * @param conf Configuration to add the resource to
+   * @return whether the resource has been added to the configuration
+   */
+  @Unstable
+  public static boolean addFileToSharedCacheAndClasspath(URI resource,
+      Configuration conf) {
+    SharedCacheConfig scConfig = new SharedCacheConfig();
+    scConfig.init(conf);
+    if (scConfig.isSharedCacheLibjarsEnabled()) {
+      String files =
+          conf.get(MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE);
+          conf.set(MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE,
+          files == null ? resource.toString() : files + ","
+              + resource.toString());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Add an archive to job config for shared cache processing. If shared cache
+   * is enabled, it will return true, otherwise, return false. We don't check
+   * with SCM here given application might not be able to provide the job id;
+   * ClientSCMProtocol.use requires the application id. Job Submitter will read
+   * the files from job config and take care of things. Intended to be used by
+   * user code.
+   *
+   * @param resource The resource that Job Submitter will process later using
+   *          shared cache.
+   * @param conf Configuration to add the resource to
+   * @return whether the resource has been added to the configuration
+   */
+  @Unstable
+  public static boolean addArchiveToSharedCache(URI resource,
+      Configuration conf) {
+    SharedCacheConfig scConfig = new SharedCacheConfig();
+    scConfig.init(conf);
+    if (scConfig.isSharedCacheArchivesEnabled()) {
+      String files = conf.get(MRJobConfig.ARCHIVES_FOR_SHARED_CACHE);
+      conf.set(
+          MRJobConfig.ARCHIVES_FOR_SHARED_CACHE,
+          files == null ? resource.toString() : files + ","
+              + resource.toString());
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * This is to set the shared cache upload policies for files.
+   *
+   * @param conf Configuration which stores the shared cache upload policies
+   * @param policies A map containing the shared cache upload policies for a
+   *          set of resources. The key is the url of the resource and the
+   *          value is the upload policy. True if it should be uploaded,
+   *          false otherwise.
+   */
+  @Unstable
+  public static void setFileSharedCacheUploadPolicies(Configuration conf,
+      Map<String, Boolean> policies) {
+    setSharedCacheUploadPolicies(conf, policies, true);
+  }
+
+  /**
+   * This is to set the shared cache upload policies for archives.
+   *
+   * @param conf Configuration which stores the shared cache upload policies
+   * @param policies A map containing the shared cache upload policies for a
+   *          set of resources. The key is the url of the resource and the
+   *          value is the upload policy. True if it should be uploaded,
+   *          false otherwise.
+   */
+  @Unstable
+  public static void setArchiveSharedCacheUploadPolicies(Configuration conf,
+      Map<String, Boolean> policies) {
+    setSharedCacheUploadPolicies(conf, policies, false);
+  }
+
+  /**
+   * Serialize a set of shared cache upload policies into a config parameter.
+   *
+   * @param conf Configuration which stores the shared cache upload policies
+   * @param policies A map containing the shared cache upload policies for a
+   *          set of resources. The key is the url of the resource and the
+   *          value is the upload policy. True if it should be uploaded, false
+   *          otherwise.
+   * @param areFiles True if these policies are for files, false if they are
+   *          for archives.
+   */
+  private static void setSharedCacheUploadPolicies(Configuration conf,
+      Map<String, Boolean> policies, boolean areFiles) {
+    if (policies != null) {
+      StringBuilder sb = new StringBuilder();
+      Iterator<Map.Entry<String, Boolean>> it = policies.entrySet().iterator();
+      Map.Entry<String, Boolean> e = it.next();
+      sb.append(e.getKey()).append(":").append(e.getValue());
+      while (it.hasNext()) {
+        e = it.next();
+        sb.append(",").append(e.getKey()).append(":").append(e.getValue());
+      }
+      String confParam =
+          areFiles ? MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES
+              : MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
+      conf.set(confParam, sb.toString());
+    }
+  }
+  
+  /**
+   * Deserialize a set of shared cache upload policies from a config parameter.
+   *
+   * @param conf Configuration which stores the shared cache upload policies
+   * @param areFiles True if these policies are for files, false if they are
+   *         for archives.
+   * @return A map containing the shared cache upload policies for a set of
+   *         resources. The key is the url of the resource and the value is the
+   *         upload policy. True if it should be uploaded, false otherwise.
+   * @throws IOException if the shared cache upload policies parameter has an
+   *           invalid format.
+   */
+  private static Map<String, Boolean> getSharedCacheUploadPolicies(
+      Configuration conf, boolean areFiles) throws IOException {
+    String confParam =
+        areFiles ? MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES
+            : MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
+    Collection<String> policies = conf.getStringCollection(confParam);
+    String[] policy;
+    Map<String, Boolean> policyMap = new HashMap<String, Boolean>();
+    for (String s : policies) {
+      policy = StringUtils.split(s, ':');
+      if (policy.length != 2) {
+        throw new IOException(confParam
+            + " is mis-formatted. Error on [" + policy + "]");
+      }
+      policyMap.put(policy[0], Boolean.parseBoolean(policy[1]));
+    }
+    return policyMap;
+  }
+  
+  /**
+   * This is to get the shared cache upload policies for files.
+   *
+   * @param conf Configuration which stores the shared cache upload policies
+   * @return A map containing the shared cache upload policies for a set of
+   *         resources. The key is the url of the resource and the value is the
+   *         upload policy. True if it should be uploaded, false otherwise.
+   * @throws IOException if the shared cache upload policies parameter has an
+   *           invalid format.
+   */
+  @Unstable
+  public static Map<String, Boolean> getFileSharedCacheUploadPolicies(
+      Configuration conf) throws IOException {
+    return getSharedCacheUploadPolicies(conf, true);
+  }
+
+  /**
+   * This is to get the shared cache upload policies for archives.
+   *
+   * @param conf Configuration which stores the shared cache upload policies
+   * @return A map containing the shared cache upload policies for a set of
+   *         resources. The key is the url of the resource and the value is the
+   *         upload policy. True if it should be uploaded, false otherwise.
+   * @throws IOException if the shared cache upload policies parameter has an
+   *           invalid format.
+   */
+  @Unstable
+  public static Map<String, Boolean> getArchiveSharedCacheUploadPolicies(
+      Configuration conf) throws IOException {
+    return getSharedCacheUploadPolicies(conf, false);
   }
 
   private synchronized void connect()

@@ -43,6 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskLog;
@@ -251,10 +252,16 @@ public class MRApps extends Apps {
     if (!userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
+    /*
+     * We use "*" for the name of the JOB_JAR instead of MRJobConfig.JOB_JAR for
+     * the case where the job jar is not necessarily named "job.jar". This can
+     * happen, for example, when the job is leveraging a resource from the YARN
+     * shared cache.
+     */
     MRApps.addToEnvironment(
         environment,
         classpathEnvVar,
-        MRJobConfig.JOB_JAR + Path.SEPARATOR + MRJobConfig.JOB_JAR, conf);
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + "*", conf);
     MRApps.addToEnvironment(
         environment,
         classpathEnvVar,
@@ -482,7 +489,8 @@ public class MRApps extends Apps {
         DistributedCache.getCacheArchives(conf), 
         DistributedCache.getArchiveTimestamps(conf),
         getFileSizes(conf, MRJobConfig.CACHE_ARCHIVES_SIZES), 
-        DistributedCache.getArchiveVisibilities(conf));
+        DistributedCache.getArchiveVisibilities(conf),
+        Job.getArchiveSharedCacheUploadPolicies(conf));
     
     // Cache files
     parseDistributedCacheArtifacts(conf, 
@@ -491,7 +499,8 @@ public class MRApps extends Apps {
         DistributedCache.getCacheFiles(conf),
         DistributedCache.getFileTimestamps(conf),
         getFileSizes(conf, MRJobConfig.CACHE_FILES_SIZES),
-        DistributedCache.getFileVisibilities(conf));
+        DistributedCache.getFileVisibilities(conf),
+        Job.getFileSharedCacheUploadPolicies(conf));
   }
 
   /**
@@ -564,19 +573,19 @@ public class MRApps extends Apps {
       Configuration conf,
       Map<String, LocalResource> localResources,
       LocalResourceType type,
-      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[])
-  throws IOException {
+      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[],
+      Map<String, Boolean> sharedCacheUploadPolicies) throws IOException {
 
     if (uris != null) {
       // Sanity check
-      if ((uris.length != timestamps.length) || (uris.length != sizes.length) ||
-          (uris.length != visibilities.length)) {
-        throw new IllegalArgumentException("Invalid specification for " +
-            "distributed-cache artifacts of type " + type + " :" +
-            " #uris=" + uris.length +
-            " #timestamps=" + timestamps.length +
-            " #visibilities=" + visibilities.length
-            );
+      // Check if sharedCacheUploadPolicies is null for backward compatibility,
+      // given older version of MR client won't set the value.
+      if ((uris.length != timestamps.length) || (uris.length != sizes.length)
+          || (uris.length != visibilities.length)) {
+        throw new IllegalArgumentException("Invalid specification for "
+            + "distributed-cache artifacts of type " + type + " :" + " #uris="
+            + uris.length + " #timestamps=" + timestamps.length
+            + " #visibilities=" + visibilities.length);
       }
       
       for (int i = 0; i < uris.length; ++i) {
@@ -625,10 +634,13 @@ public class MRApps extends Apps {
               getResourceDescription(orig.getType()) + orig.getResource() + 
               " conflicts with " + getResourceDescription(type) + u);
         }
-        localResources.put(linkName, LocalResource
-            .newInstance(URL.fromURI(p.toUri()), type, visibilities[i]
-            ? LocalResourceVisibility.PUBLIC : LocalResourceVisibility.PRIVATE,
-          sizes[i], timestamps[i]));
+        Boolean sharedCachePolicy = sharedCacheUploadPolicies.get(u);
+        sharedCachePolicy =
+            sharedCachePolicy == null ? false : sharedCachePolicy;
+        localResources.put(linkName, LocalResource.newInstance(URL.fromURI(p
+            .toUri()), type, visibilities[i] ? LocalResourceVisibility.PUBLIC
+            : LocalResourceVisibility.PRIVATE, sizes[i], timestamps[i],
+            sharedCachePolicy));
       }
     }
   }
