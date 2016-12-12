@@ -316,8 +316,7 @@ public class TestJobResourceUploader {
     assertEquals(numOfArchivesShouldBeUploadedToSharedCacheExpected,
         numOfArchivesShouldBeUploadedToSharedCache);
 
-    if (jobJarInSharedCacheBeforeUpload &&
-        sharedCacheConfig.isSharedCacheJobjarEnabled()) {
+    if (sharedCacheConfig.isSharedCacheJobjarEnabled()) {
       assertTrue(jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
           MRJobConfig.JOBJAR_VISIBILITY_DEFAULT));
     } else {

@@ -380,12 +380,10 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
-    conf.set(MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     DistributedCache.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
-    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
@@ -414,7 +412,6 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "10,11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "10,11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true,true");
-    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true,true");
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
@@ -442,12 +439,10 @@ public class TestMRApps {
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
-    conf.set(MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     DistributedCache.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
-    conf.set(MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES, "true");
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);

@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
@@ -1443,8 +1444,14 @@ public class Job extends JobContextImpl implements JobContext {
     if (policies != null) {
       StringBuilder sb = new StringBuilder();
       Iterator<Map.Entry<String, Boolean>> it = policies.entrySet().iterator();
-      Map.Entry<String, Boolean> e = it.next();
-      sb.append(e.getKey()).append(":").append(e.getValue());
+      Map.Entry<String, Boolean> e;
+      if (it.hasNext()) {
+        e = it.next();
+        sb.append(e.getKey()).append(":").append(e.getValue());
+      } else {
+        // policies is an empty map, just skip setting the parameter
+        return;
+      }
       while (it.hasNext()) {
         e = it.next();
         sb.append(",").append(e.getKey()).append(":").append(e.getValue());
@@ -1465,11 +1472,11 @@ public class Job extends JobContextImpl implements JobContext {
    * @return A map containing the shared cache upload policies for a set of
    *         resources. The key is the url of the resource and the value is the
    *         upload policy. True if it should be uploaded, false otherwise.
-   * @throws IOException if the shared cache upload policies parameter has an
-   *           invalid format.
+   * @throws InvalidJobConfException if the shared cache upload policies
+   *         parameter has an invalid format.
    */
   private static Map<String, Boolean> getSharedCacheUploadPolicies(
-      Configuration conf, boolean areFiles) throws IOException {
+      Configuration conf, boolean areFiles) throws InvalidJobConfException {
     String confParam =
         areFiles ? MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES
             : MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
@@ -1479,7 +1486,7 @@ public class Job extends JobContextImpl implements JobContext {
     for (String s : policies) {
       policy = StringUtils.split(s, ':');
       if (policy.length != 2) {
-        throw new IOException(confParam
+        throw new InvalidJobConfException(confParam
             + " is mis-formatted. Error on [" + policy + "]");
       }
       policyMap.put(policy[0], Boolean.parseBoolean(policy[1]));
@@ -1494,12 +1501,12 @@ public class Job extends JobContextImpl implements JobContext {
    * @return A map containing the shared cache upload policies for a set of
    *         resources. The key is the url of the resource and the value is the
    *         upload policy. True if it should be uploaded, false otherwise.
-   * @throws IOException if the shared cache upload policies parameter has an
-   *           invalid format.
+   * @throws InvalidJobConfException if the shared cache upload policies
+   *         parameter has an invalid format.
    */
   @Unstable
   public static Map<String, Boolean> getFileSharedCacheUploadPolicies(
-      Configuration conf) throws IOException {
+      Configuration conf) throws InvalidJobConfException {
     return getSharedCacheUploadPolicies(conf, true);
   }
 
@@ -1510,12 +1517,12 @@ public class Job extends JobContextImpl implements JobContext {
    * @return A map containing the shared cache upload policies for a set of
    *         resources. The key is the url of the resource and the value is the
    *         upload policy. True if it should be uploaded, false otherwise.
-   * @throws IOException if the shared cache upload policies parameter has an
-   *           invalid format.
+   * @throws InvalidJobConfException if the shared cache upload policies
+   *         parameter has an invalid format. 
    */
   @Unstable
   public static Map<String, Boolean> getArchiveSharedCacheUploadPolicies(
-      Configuration conf) throws IOException {
+      Configuration conf) throws InvalidJobConfException {
     return getSharedCacheUploadPolicies(conf, false);
   }
 
