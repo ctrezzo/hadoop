@@ -1428,6 +1428,10 @@ public class Job extends JobContextImpl implements JobContext {
     setSharedCacheUploadPolicies(conf, policies, false);
   }
 
+  // We use a double colon because a colon is a reserved character in a URI and
+  // there should not be two colons next to each other.
+  private static String PAIR_DELIM = "::";
+
   /**
    * Serialize a set of shared cache upload policies into a config parameter.
    *
@@ -1447,14 +1451,15 @@ public class Job extends JobContextImpl implements JobContext {
       Map.Entry<String, Boolean> e;
       if (it.hasNext()) {
         e = it.next();
-        sb.append(e.getKey()).append(":").append(e.getValue());
+        sb.append(e.getKey()).append(PAIR_DELIM).append(e.getValue());
       } else {
         // policies is an empty map, just skip setting the parameter
         return;
       }
       while (it.hasNext()) {
         e = it.next();
-        sb.append(",").append(e.getKey()).append(":").append(e.getValue());
+        sb.append(",").append(e.getKey()).append(PAIR_DELIM)
+            .append(e.getValue());
       }
       String confParam =
           areFiles ? MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES
@@ -1484,10 +1489,10 @@ public class Job extends JobContextImpl implements JobContext {
     String[] policy;
     Map<String, Boolean> policyMap = new HashMap<String, Boolean>();
     for (String s : policies) {
-      policy = StringUtils.split(s, ':');
+      policy = s.split(PAIR_DELIM);
       if (policy.length != 2) {
         throw new InvalidJobConfException(confParam
-            + " is mis-formatted. Error on [" + policy + "]");
+            + " is mis-formatted. Error on [" + s + "]");
       }
       policyMap.put(policy[0], Boolean.parseBoolean(policy[1]));
     }

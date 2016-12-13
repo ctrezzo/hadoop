@@ -239,7 +239,12 @@ class JobResourceUploader {
           URI pathURI = getPathURI(newPath, tmpURI.getFragment());
           job.addCacheFile(pathURI);
           if (scConfig.isSharedCacheFilesEnabled()) {
-            fileSCUploadPolicies.put(pathURI.toString(), uploadToSharedCache);
+            // handle a path that has been specified multiple times
+            Boolean previousPolicy =
+                fileSCUploadPolicies.get(pathURI.toString());
+            if (previousPolicy == null || previousPolicy == false) {
+              fileSCUploadPolicies.put(pathURI.toString(), uploadToSharedCache);
+            }
           }
         } catch (URISyntaxException ue) {
           // should not throw a uri exception
@@ -288,8 +293,12 @@ class JobResourceUploader {
           job.addCacheFile(newPath.toUri());
         }
         if (scConfig.isSharedCacheLibjarsEnabled()) {
-          fileSCUploadPolicies.put(newPath.toUri().toString(),
-              uploadToSharedCache);
+          // handle a path that has been specified multiple times
+          String pathUriString = newPath.toUri().toString();
+          Boolean previousPolicy = fileSCUploadPolicies.get(pathUriString);
+          if (previousPolicy == null || previousPolicy == false) {
+            fileSCUploadPolicies.put(pathUriString, uploadToSharedCache);
+          }
         }
       }
 
@@ -341,8 +350,13 @@ class JobResourceUploader {
           URI pathURI = getPathURI(newPath, tmpURI.getFragment());
           job.addCacheArchive(pathURI);
           if (scConfig.isSharedCacheArchivesEnabled()) {
-            archiveSCUploadPolicies
-                .put(pathURI.toString(), uploadToSharedCache);
+            // handle a path that has been specified multiple times
+            Boolean previousPolicy =
+                archiveSCUploadPolicies.get(pathURI.toString());
+            if (previousPolicy == null || previousPolicy == false) {
+              archiveSCUploadPolicies.put(pathURI.toString(),
+                  uploadToSharedCache);
+            }
           }
         } catch (URISyntaxException ue) {
           // should not throw an uri excpetion
