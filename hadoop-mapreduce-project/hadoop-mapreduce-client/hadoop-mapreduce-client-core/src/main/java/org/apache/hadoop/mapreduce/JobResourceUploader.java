@@ -396,11 +396,13 @@ class JobResourceUploader {
             uploadToSharedCache = true;
             newJarPath = jobJarPath;
           }
+        } else {
+          // we don't need to upload the jobjar to the staging directory because
+          // it is already in an accessible place
+          newJarPath = jobJarPath;
         }
-        // we don't need to upload the jobjar to the staging directory because
-        // it is already in an accessible place
       }
-      job.setJar(jobJarPath.toString());
+      job.setJar(newJarPath.toString());
       if (scConfig.isSharedCacheJobjarEnabled()) {
         conf.setBoolean(MRJobConfig.JOBJAR_SHARED_CACHE_UPLOAD_POLICY,
             uploadToSharedCache);
