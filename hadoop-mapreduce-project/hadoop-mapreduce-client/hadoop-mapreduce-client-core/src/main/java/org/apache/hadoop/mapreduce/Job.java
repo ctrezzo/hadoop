@@ -1467,7 +1467,7 @@ public class Job extends JobContextImpl implements JobContext {
       conf.set(confParam, sb.toString());
     }
   }
-  
+
   /**
    * Deserialize a set of shared cache upload policies from a config parameter.
    *
@@ -1498,7 +1498,7 @@ public class Job extends JobContextImpl implements JobContext {
     }
     return policyMap;
   }
-  
+
   /**
    * This is to get the shared cache upload policies for files.
    *
@@ -1523,7 +1523,7 @@ public class Job extends JobContextImpl implements JobContext {
    *         resources. The key is the url of the resource and the value is the
    *         upload policy. True if it should be uploaded, false otherwise.
    * @throws InvalidJobConfException if the shared cache upload policies
-   *         parameter has an invalid format. 
+   *         parameter has an invalid format.
    */
   @Unstable
   public static Map<String, Boolean> getArchiveSharedCacheUploadPolicies(

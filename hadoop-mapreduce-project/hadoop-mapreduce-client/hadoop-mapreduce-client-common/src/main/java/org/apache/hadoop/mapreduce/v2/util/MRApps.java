@@ -634,9 +634,9 @@ public class MRApps extends Apps {
               getResourceDescription(orig.getType()) + orig.getResource() + 
               " conflicts with " + getResourceDescription(type) + u);
         }
-        Boolean sharedCachePolicy = sharedCacheUploadPolicies.get(u);
+        Boolean sharedCachePolicy = sharedCacheUploadPolicies.get(u.toString());
         sharedCachePolicy =
-            sharedCachePolicy == null ? false : sharedCachePolicy;
+            sharedCachePolicy == null ? Boolean.FALSE : sharedCachePolicy;
         localResources.put(linkName, LocalResource.newInstance(URL.fromURI(p
             .toUri()), type, visibilities[i] ? LocalResourceVisibility.PUBLIC
             : LocalResourceVisibility.PRIVATE, sizes[i], timestamps[i],
