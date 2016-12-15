@@ -578,8 +578,6 @@ public class MRApps extends Apps {
 
     if (uris != null) {
       // Sanity check
-      // Check if sharedCacheUploadPolicies is null for backward compatibility,
-      // given older version of MR client won't set the value.
       if ((uris.length != timestamps.length) || (uris.length != sizes.length)
           || (uris.length != visibilities.length)) {
         throw new IllegalArgumentException("Invalid specification for "
