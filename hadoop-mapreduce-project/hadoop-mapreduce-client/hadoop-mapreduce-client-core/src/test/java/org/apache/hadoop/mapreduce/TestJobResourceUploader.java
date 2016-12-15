@@ -18,358 +18,342 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.jar.JarOutputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.client.api.SharedCacheClient;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
- * Tests the JobResourceUploader class.
+ * A class for unit testing JobResourceUploader.
  */
 public class TestJobResourceUploader {
-  protected static final Log LOG = LogFactory
-      .getLog(TestJobResourceUploader.class);
-  private static MiniDFSCluster dfs;
-  private static FileSystem localFs;
-  private static FileSystem remoteFs;
-  private static Configuration conf = new Configuration();
-  private static Path testRootDir;
-  private static Path remoteStagingDir =
-      new Path(MRJobConfig.DEFAULT_MR_AM_STAGING_DIR);
-  private String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
 
-  @Before
-  public void cleanup() throws Exception {
-    remoteFs.delete(remoteStagingDir, true);
+  @Test
+  public void testAllDefaults() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    runLimitsTest(b.build(), true, null);
   }
 
-  @BeforeClass
-  public static void setup() throws IOException {
-    // create configuration, dfs, file system
-    localFs = FileSystem.getLocal(conf);
-    testRootDir =
-        new Path("target", TestJobResourceUploader.class.getName() + "-tmpDir")
-            .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
-    dfs = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
-    remoteFs = dfs.getFileSystem();
+  @Test
+  public void testNoLimitsWithResources() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    b.setNumOfDCArchives(1);
+    b.setNumOfDCFiles(1);
+    b.setNumOfTmpArchives(10);
+    b.setNumOfTmpFiles(1);
+    b.setNumOfTmpLibJars(1);
+    b.setJobJar(true);
+    b.setSizeOfResource(10);
+    runLimitsTest(b.build(), true, null);
   }
 
-  @AfterClass
-  public static void tearDown() {
+  @Test
+  public void testAtResourceLimit() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    b.setNumOfDCArchives(1);
+    b.setNumOfDCFiles(1);
+    b.setNumOfTmpArchives(1);
+    b.setNumOfTmpFiles(1);
+    b.setNumOfTmpLibJars(1);
+    b.setJobJar(true);
+    b.setMaxResources(6);
+    runLimitsTest(b.build(), true, null);
+  }
+
+  @Test
+  public void testOverResourceLimit() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    b.setNumOfDCArchives(1);
+    b.setNumOfDCFiles(1);
+    b.setNumOfTmpArchives(1);
+    b.setNumOfTmpFiles(2);
+    b.setNumOfTmpLibJars(1);
+    b.setJobJar(true);
+    b.setMaxResources(6);
+    runLimitsTest(b.build(), false, ResourceViolation.NUMBER_OF_RESOURCES);
+  }
+
+  @Test
+  public void testAtResourcesMBLimit() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    b.setNumOfDCArchives(1);
+    b.setNumOfDCFiles(1);
+    b.setNumOfTmpArchives(1);
+    b.setNumOfTmpFiles(2);
+    b.setNumOfTmpLibJars(1);
+    b.setJobJar(true);
+    b.setMaxResourcesMB(7);
+    b.setSizeOfResource(1);
+    runLimitsTest(b.build(), true, null);
+  }
+
+  @Test
+  public void testOverResourcesMBLimit() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    b.setNumOfDCArchives(1);
+    b.setNumOfDCFiles(2);
+    b.setNumOfTmpArchives(1);
+    b.setNumOfTmpFiles(2);
+    b.setNumOfTmpLibJars(1);
+    b.setJobJar(true);
+    b.setMaxResourcesMB(7);
+    b.setSizeOfResource(1);
+    runLimitsTest(b.build(), false, ResourceViolation.TOTAL_RESOURCE_SIZE);
+  }
+
+  @Test
+  public void testAtSingleResourceMBLimit() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    b.setNumOfDCArchives(1);
+    b.setNumOfDCFiles(2);
+    b.setNumOfTmpArchives(1);
+    b.setNumOfTmpFiles(2);
+    b.setNumOfTmpLibJars(1);
+    b.setJobJar(true);
+    b.setMaxSingleResourceMB(1);
+    b.setSizeOfResource(1);
+    runLimitsTest(b.build(), true, null);
+  }
+
+  @Test
+  public void testOverSingleResourceMBLimit() throws IOException {
+    ResourceLimitsConf.Builder b = new ResourceLimitsConf.Builder();
+    b.setNumOfDCArchives(1);
+    b.setNumOfDCFiles(2);
+    b.setNumOfTmpArchives(1);
+    b.setNumOfTmpFiles(2);
+    b.setNumOfTmpLibJars(1);
+    b.setJobJar(true);
+    b.setMaxSingleResourceMB(1);
+    b.setSizeOfResource(10);
+    runLimitsTest(b.build(), false, ResourceViolation.SINGLE_RESOURCE_SIZE);
+  }
+
+  private enum ResourceViolation {
+    NUMBER_OF_RESOURCES, TOTAL_RESOURCE_SIZE, SINGLE_RESOURCE_SIZE;
+  }
+
+  private void runLimitsTest(ResourceLimitsConf rlConf,
+      boolean checkShouldSucceed, ResourceViolation violation)
+      throws IOException {
+
+    if (!checkShouldSucceed && violation == null) {
+      Assert.fail("Test is misconfigured. checkShouldSucceed is set to false"
+          + " and a ResourceViolation is not specified.");
+    }
+
+    JobConf conf = setupJobConf(rlConf);
+    JobResourceUploader uploader = new StubedUploader(conf);
+    long configuredSizeOfResourceBytes = rlConf.sizeOfResource * 1024 * 1024;
+    when(mockedStatus.getLen()).thenReturn(configuredSizeOfResourceBytes);
+    when(mockedStatus.isDirectory()).thenReturn(false);
+    Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
     try {
-      if (localFs != null) {
-        localFs.close();
+      Collection<String> dcResources =
+          conf.getStringCollection(MRJobConfig.CACHE_FILES);
+      dcResources.addAll(conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES));
+      uploader.checkLocalizationLimits(conf,
+          conf.getStringCollection("tmpfiles"),
+          conf.getStringCollection("tmpjars"),
+          conf.getStringCollection("tmparchives"), conf.getJar(), dcResources,
+          statCache);
+      Assert.assertTrue("Limits check succeeded when it should have failed.",
+          checkShouldSucceed);
+    } catch (IOException e) {
+      if (checkShouldSucceed) {
+        Assert.fail("Limits check failed when it should have succeeded: " + e);
       }
-      if (remoteFs != null) {
-        remoteFs.close();
+      switch (violation) {
+      case NUMBER_OF_RESOURCES:
+        if (!e.getMessage().contains(
+            JobResourceUploader.MAX_RESOURCE_ERR_MSG)) {
+          Assert.fail("Test failed unexpectedly: " + e);
+        }
+        break;
+
+      case TOTAL_RESOURCE_SIZE:
+        if (!e.getMessage().contains(
+            JobResourceUploader.MAX_TOTAL_RESOURCE_MB_ERR_MSG)) {
+          Assert.fail("Test failed unexpectedly: " + e);
+        }
+        break;
+
+      case SINGLE_RESOURCE_SIZE:
+        if (!e.getMessage().contains(
+            JobResourceUploader.MAX_SINGLE_RESOURCE_MB_ERR_MSG)) {
+          Assert.fail("Test failed unexpectedly: " + e);
+        }
+        break;
+
+      default:
+        Assert.fail("Test failed unexpectedly: " + e);
+        break;
       }
-      if (dfs != null) {
-        dfs.shutdown();
-      }
-    } catch (IOException ioe) {
-      LOG.info("IO exception in closing file system");
-      ioe.printStackTrace();
     }
   }
 
-  private class MyFileUploader extends JobResourceUploader {
-    // The mocked SharedCacheClient that will be fed into the FileUploader
-    private SharedCacheClient mockscClient = mock(SharedCacheClient.class);
-    // A real client for checksum calculation
-    private SharedCacheClient scClient = SharedCacheClient
-        .createSharedCacheClient();
+  private final FileStatus mockedStatus = mock(FileStatus.class);
 
-    MyFileUploader(FileSystem submitFs, Configuration conf)
-        throws IOException {
-      super(submitFs, false);
-      // Initialize the real client, but don't start it. We don't need or want
-      // to create an actual proxy because we only use this for mocking out the
-      // getFileChecksum method.
-      scClient.init(conf);
-      when(mockscClient.getFileChecksum(any(Path.class))).thenAnswer(
-          new Answer<String>() {
-            @Override
-            public String answer(InvocationOnMock invocation) throws Throwable {
-              Path file = (Path) invocation.getArguments()[0];
-              // Use the real scClient to generate the checksum. We use an
-              // answer/mock combination to avoid having to spy on a real
-              // SharedCacheClient object.
-              return scClient.getFileChecksum(file);
-            }
-          });
+  private JobConf setupJobConf(ResourceLimitsConf rlConf) {
+    JobConf conf = new JobConf();
+    conf.setInt(MRJobConfig.MAX_RESOURCES, rlConf.maxResources);
+    conf.setLong(MRJobConfig.MAX_RESOURCES_MB, rlConf.maxResourcesMB);
+    conf.setLong(MRJobConfig.MAX_SINGLE_RESOURCE_MB,
+        rlConf.maxSingleResourceMB);
+
+    conf.set("tmpfiles",
+        buildPathString("file://tmpFiles", rlConf.numOfTmpFiles));
+    conf.set("tmpjars",
+        buildPathString("file://tmpjars", rlConf.numOfTmpLibJars));
+    conf.set("tmparchives",
+        buildPathString("file://tmpArchives", rlConf.numOfTmpArchives));
+    conf.set(MRJobConfig.CACHE_ARCHIVES,
+        buildPathString("file://cacheArchives", rlConf.numOfDCArchives));
+    conf.set(MRJobConfig.CACHE_FILES,
+        buildPathString("file://cacheFiles", rlConf.numOfDCFiles));
+    if (rlConf.jobJar) {
+      conf.setJar("file://jobjar.jar");
+    }
+    return conf;
+  }
+
+  private String buildPathString(String pathPrefix, int numOfPaths) {
+    if (numOfPaths < 1) {
+      return "";
+    } else {
+      StringBuilder b = new StringBuilder();
+      b.append(pathPrefix + 0);
+      for (int i = 1; i < numOfPaths; i++) {
+        b.append("," + pathPrefix + i);
+      }
+      return b.toString();
+    }
+  }
+
+  final static class ResourceLimitsConf {
+    private final int maxResources;
+    private final long maxResourcesMB;
+    private final long maxSingleResourceMB;
+    private final int numOfTmpFiles;
+    private final int numOfTmpArchives;
+    private final int numOfTmpLibJars;
+    private final boolean jobJar;
+    private final int numOfDCFiles;
+    private final int numOfDCArchives;
+    private final long sizeOfResource;
+
+    static final ResourceLimitsConf DEFAULT = new ResourceLimitsConf();
+
+    private ResourceLimitsConf() {
+      this(new Builder());
     }
 
-    // This method is to prime the mock client with the correct checksum, so it
-    // looks like a given resource is present in the shared cache.
-    public void mockFileInSharedCache(Path localFile, Path remoteFile)
-        throws YarnException, IOException {
-      // when the resource is referenced, simply return the remote path to the
-      // caller
-      when(
-          mockscClient.use(any(ApplicationId.class),
-              eq(scClient.getFileChecksum(localFile)))).thenReturn(remoteFile);
+    private ResourceLimitsConf(Builder builder) {
+      this.maxResources = builder.maxResources;
+      this.maxResourcesMB = builder.maxResourcesMB;
+      this.maxSingleResourceMB = builder.maxSingleResourceMB;
+      this.numOfTmpFiles = builder.numOfTmpFiles;
+      this.numOfTmpArchives = builder.numOfTmpArchives;
+      this.numOfTmpLibJars = builder.numOfTmpLibJars;
+      this.jobJar = builder.jobJar;
+      this.numOfDCFiles = builder.numOfDCFiles;
+      this.numOfDCArchives = builder.numOfDCArchives;
+      this.sizeOfResource = builder.sizeOfResource;
+    }
+
+    static class Builder {
+      // Defaults
+      private int maxResources = 0;
+      private long maxResourcesMB = 0;
+      private long maxSingleResourceMB = 0;
+      private int numOfTmpFiles = 0;
+      private int numOfTmpArchives = 0;
+      private int numOfTmpLibJars = 0;
+      private boolean jobJar = false;
+      private int numOfDCFiles = 0;
+      private int numOfDCArchives = 0;
+      private long sizeOfResource = 0;
+
+      Builder() {
+      }
+
+      Builder setMaxResources(int max) {
+        this.maxResources = max;
+        return this;
+      }
+
+      Builder setMaxResourcesMB(long max) {
+        this.maxResourcesMB = max;
+        return this;
+      }
+
+      Builder setMaxSingleResourceMB(long max) {
+        this.maxSingleResourceMB = max;
+        return this;
+      }
+
+      Builder setNumOfTmpFiles(int num) {
+        this.numOfTmpFiles = num;
+        return this;
+      }
+
+      Builder setNumOfTmpArchives(int num) {
+        this.numOfTmpArchives = num;
+        return this;
+      }
+
+      Builder setNumOfTmpLibJars(int num) {
+        this.numOfTmpLibJars = num;
+        return this;
+      }
+
+      Builder setJobJar(boolean jar) {
+        this.jobJar = jar;
+        return this;
+      }
+
+      Builder setNumOfDCFiles(int num) {
+        this.numOfDCFiles = num;
+        return this;
+      }
+
+      Builder setNumOfDCArchives(int num) {
+        this.numOfDCArchives = num;
+        return this;
+      }
+
+      Builder setSizeOfResource(long sizeMB) {
+        this.sizeOfResource = sizeMB;
+        return this;
+      }
+
+      ResourceLimitsConf build() {
+        return new ResourceLimitsConf(this);
+      }
+    }
+  }
+
+  class StubedUploader extends JobResourceUploader {
+    StubedUploader(JobConf conf) throws IOException {
+      super(FileSystem.getLocal(conf), false);
     }
 
     @Override
-    protected SharedCacheClient createSharedCacheClient(Configuration c) {
-      // Feed the mocked SharedCacheClient into the FileUploader logic
-      return mockscClient;
+    FileStatus getFileStatus(Map<URI, FileStatus> statCache, Configuration job,
+        Path p) throws IOException {
+      return mockedStatus;
     }
-  }
-
-  @Test
-  public void testSharedCacheDisabled() throws Exception {
-    JobConf jobConf = createJobConf();
-    Job job = new Job(jobConf);
-    job.setJobID(new JobID("application_1234_5678", 1));
-
-    // shared cache is disabled by default
-    uploadFilesToRemoteFS(job, jobConf, 0, 0, 0, false);
-
-  }
-
-  @Test
-  public void testSharedCacheEnabled() throws Exception {
-    JobConf jobConf = createJobConf();
-    jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "enabled");
-    Job job = new Job(jobConf);
-    job.setJobID(new JobID("application_1234_5678", 1));
-
-    // shared cache is enabled for every file type
-    // the # of times SharedCacheClient.use is called should ==
-    // total # of files/libjars/archive/jobjar
-    uploadFilesToRemoteFS(job, jobConf, 8, 3, 2, false);
-  }
-
-  @Test
-  public void testSharedCacheEnabledWithJobJarInSharedCache()
-      throws Exception {
-    JobConf jobConf = createJobConf();
-    jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "enabled");
-    Job job = new Job(jobConf);
-    job.setJobID(new JobID("application_1234_5678", 1));
-
-    // shared cache is enabled for every file type
-    // the # of times SharedCacheClient.use is called should ==
-    // total # of files/libjars/archive/jobjar
-    uploadFilesToRemoteFS(job, jobConf, 8, 3, 2, true);
-  }
-
-  @Test
-  public void testSharedCacheArchivesAndLibjarsEnabled() throws Exception {
-    JobConf jobConf = createJobConf();
-    jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "archives,libjars");
-    Job job = new Job(jobConf);
-    job.setJobID(new JobID("application_1234_5678", 1));
-
-    // shared cache is enabled for archives and libjars type
-    // the # of times SharedCacheClient.use is called should ==
-    // total # of libjars and archives
-    uploadFilesToRemoteFS(job, jobConf, 5, 1, 2, true);
-  }
-
-  private JobConf createJobConf() {
-    JobConf jobConf = new JobConf();
-    jobConf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
-    jobConf.setBoolean(YarnConfiguration.SHARED_CACHE_ENABLED, true);
-
-    jobConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, remoteFs.getUri()
-        .toString());
-    return jobConf;
-  }
-
-  private Path copyToRemote(Path jar) throws IOException {
-    Path remoteFile = new Path("/tmp", jar.getName());
-    remoteFs.copyFromLocalFile(jar, remoteFile);
-    return remoteFile;
-  }
-
-  private void makeJarAvailableInSharedCache(Path jar,
-      MyFileUploader fileUploader) throws YarnException, IOException {
-    // copy file to remote file system
-    Path remoteFile = copyToRemote(jar);
-    // prime mocking so that it looks like this file is in the shared cache
-    fileUploader.mockFileInSharedCache(jar, remoteFile);
-  }
-
-  private void uploadFilesToRemoteFS(Job job, JobConf jobConf,
-      int useCallCountExpected,
-      int numOfFilesShouldBeUploadedToSharedCacheExpected,
-      int numOfArchivesShouldBeUploadedToSharedCacheExpected,
-      boolean jobJarInSharedCacheBeforeUpload) throws Exception {
-    MyFileUploader fileUploader = new MyFileUploader(remoteFs, jobConf);
-    SharedCacheConfig sharedCacheConfig = new SharedCacheConfig();
-    sharedCacheConfig.init(jobConf);
-
-    Path firstFile = createTempFile("first-input-file", "x");
-    Path secondFile = createTempFile("second-input-file", "xx");
-
-    // Add files to job conf via distributed cache API as well as command line
-    boolean fileAdded = Job.addFileToSharedCache(firstFile.toUri(), jobConf);
-    assertEquals(sharedCacheConfig.isSharedCacheFilesEnabled(), fileAdded);
-    if (!fileAdded) {
-      Path remoteFile = copyToRemote(firstFile);
-      job.addCacheFile(remoteFile.toUri());
-    }
-    jobConf.set("tmpfiles", secondFile.toString());
-
-    // Create jars with a single file inside them.
-    Path firstJar = makeJar(new Path(testRootDir, "distributed.first.jar"), 1);
-    Path secondJar =
-        makeJar(new Path(testRootDir, "distributed.second.jar"), 2);
-
-    // Verify duplicated contents can be handled properly.
-    Path thirdJar = new Path(testRootDir, "distributed.third.jar");
-    localFs.copyFromLocalFile(secondJar, thirdJar);
-
-    // make secondJar cache available
-    makeJarAvailableInSharedCache(secondJar, fileUploader);
-
-    // Add libjars to job conf via distributed cache API as well as command
-    // line
-    boolean libjarAdded =
-        Job.addFileToSharedCacheAndClasspath(firstJar.toUri(), jobConf);
-    assertEquals(sharedCacheConfig.isSharedCacheLibjarsEnabled(), libjarAdded);
-    if (!libjarAdded) {
-      Path remoteJar = copyToRemote(firstJar);
-      job.addFileToClassPath(remoteJar);
-    }
-
-    jobConf.set("tmpjars", secondJar.toString() + "," + thirdJar.toString());
-
-    Path firstArchive = makeArchive("first-archive.zip", "first-file");
-    Path secondArchive = makeArchive("second-archive.zip", "second-file");
-
-    // Add archives to job conf via distributed cache API as well as command
-    // line
-    boolean archiveAdded =
-        Job.addArchiveToSharedCache(firstArchive.toUri(), jobConf);
-    assertEquals(sharedCacheConfig.isSharedCacheArchivesEnabled(),
-        archiveAdded);
-    if (!archiveAdded) {
-      Path remoteArchive = copyToRemote(firstArchive);
-      job.addCacheArchive(remoteArchive.toUri());
-    }
-
-    jobConf.set("tmparchives", secondArchive.toString());
-
-    // Add job jar to job conf
-    Path jobJar = makeJar(new Path(testRootDir, "test-job.jar"), 4);
-    if (jobJarInSharedCacheBeforeUpload) {
-      makeJarAvailableInSharedCache(jobJar, fileUploader);
-    }
-    jobConf.setJar(jobJar.toString());
-
-    fileUploader.uploadResources(job, remoteStagingDir);
-
-    verify(fileUploader.mockscClient, times(useCallCountExpected)).use(
-        any(ApplicationId.class), anyString());
-
-    int numOfFilesShouldBeUploadedToSharedCache = 0;
-    Map<String, Boolean> filesSharedCacheUploadPolicies =
-        Job.getFileSharedCacheUploadPolicies(jobConf);
-    for (Boolean policy : filesSharedCacheUploadPolicies.values()) {
-      LOG.info("CHRIS: " + policy);
-      if (policy) {
-        numOfFilesShouldBeUploadedToSharedCache++;
-      }
-    }
-    assertEquals(numOfFilesShouldBeUploadedToSharedCacheExpected,
-        numOfFilesShouldBeUploadedToSharedCache);
-
-    int numOfArchivesShouldBeUploadedToSharedCache = 0;
-    Map<String, Boolean> archivesSharedCacheUploadPolicies =
-        Job.getArchiveSharedCacheUploadPolicies(jobConf);
-    for (Boolean policy : archivesSharedCacheUploadPolicies.values()) {
-      if (policy) {
-        numOfArchivesShouldBeUploadedToSharedCache++;
-      }
-    }
-    assertEquals(numOfArchivesShouldBeUploadedToSharedCacheExpected,
-        numOfArchivesShouldBeUploadedToSharedCache);
-
-    if (sharedCacheConfig.isSharedCacheJobjarEnabled()) {
-      assertTrue(jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
-          MRJobConfig.JOBJAR_VISIBILITY_DEFAULT));
-    } else {
-      assertFalse(jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
-          MRJobConfig.JOBJAR_VISIBILITY_DEFAULT));
-    }
-  }
-
-
-  private Path createTempFile(String filename, String contents)
-      throws IOException {
-    Path path = new Path(testRootDir, filename);
-    FSDataOutputStream os = localFs.create(path);
-    os.writeBytes(contents);
-    os.close();
-    localFs.setPermission(path, new FsPermission("700"));
-    return path;
-  }
-
-  private Path makeJar(Path p, int index) throws FileNotFoundException,
-      IOException {
-    FileOutputStream fos =
-        new FileOutputStream(new File(p.toUri().getPath()));
-    JarOutputStream jos = new JarOutputStream(fos);
-    ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
-    jos.putNextEntry(ze);
-    jos.write(("inside the jar!" + index).getBytes());
-    jos.closeEntry();
-    jos.close();
-    localFs.setPermission(p, new FsPermission("700"));
-    return p;
-  }
-
-  private Path makeArchive(String archiveFile, String filename)
-      throws Exception {
-    Path archive = new Path(testRootDir, archiveFile);
-    Path file = new Path(testRootDir, filename);
-    DataOutputStream out = localFs.create(archive);
-    ZipOutputStream zos = new ZipOutputStream(out);
-    ZipEntry ze = new ZipEntry(file.toString());
-    zos.putNextEntry(ze);
-    zos.write(input.getBytes("UTF-8"));
-    zos.closeEntry();
-    zos.close();
-    return archive;
   }
 }
