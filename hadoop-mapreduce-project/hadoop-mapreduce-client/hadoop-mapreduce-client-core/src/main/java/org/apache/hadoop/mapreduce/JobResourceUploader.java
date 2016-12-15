@@ -155,9 +155,6 @@ class JobResourceUploader {
     Collection<String> files = conf.getStringCollection("tmpfiles");
     Collection<String> libjars = conf.getStringCollection("tmpjars");
     Collection<String> archives = conf.getStringCollection("tmparchives");
-    Collection<String> dcResources =
-        conf.getStringCollection(MRJobConfig.CACHE_FILES);
-    dcResources.addAll(conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES));
     String jobJar = job.getJar();
 
     // Merge resources that have already been specified for the shared cache
@@ -170,8 +167,7 @@ class JobResourceUploader {
 
 
     Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
-    checkLocalizationLimits(conf, files, libjars, archives, jobJar,
-        dcResources, statCache);
+    checkLocalizationLimits(conf, files, libjars, archives, jobJar, statCache);
 
     Map<String, Boolean> fileSCUploadPolicies = new HashMap<String, Boolean>();
     Map<String, Boolean> archiveSCUploadPolicies =
@@ -436,8 +432,7 @@ class JobResourceUploader {
   @VisibleForTesting
   void checkLocalizationLimits(Configuration conf, Collection<String> files,
       Collection<String> libjars, Collection<String> archives, String jobJar,
-      Collection<String> dcResources, Map<URI, FileStatus> statCache)
-      throws IOException {
+      Map<URI, FileStatus> statCache) throws IOException {
 
     LimitChecker limitChecker = new LimitChecker(conf);
     if (!limitChecker.hasLimits()) {
@@ -445,7 +440,17 @@ class JobResourceUploader {
       return;
     }
 
-    for (String path : dcResources) {
+    // Get the files and archives that are already in the distributed cache
+    Collection<String> dcFiles =
+        conf.getStringCollection(MRJobConfig.CACHE_FILES);
+    Collection<String> dcArchives =
+        conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES);
+
+    for (String path : dcFiles) {
+      explorePath(conf, new Path(path), limitChecker, statCache);
+    }
+
+    for (String path : dcArchives) {
       explorePath(conf, new Path(path), limitChecker, statCache);
     }
 
