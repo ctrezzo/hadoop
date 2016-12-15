@@ -578,12 +578,14 @@ public class MRApps extends Apps {
 
     if (uris != null) {
       // Sanity check
-      if ((uris.length != timestamps.length) || (uris.length != sizes.length)
-          || (uris.length != visibilities.length)) {
-        throw new IllegalArgumentException("Invalid specification for "
-            + "distributed-cache artifacts of type " + type + " :" + " #uris="
-            + uris.length + " #timestamps=" + timestamps.length
-            + " #visibilities=" + visibilities.length);
+      if ((uris.length != timestamps.length) || (uris.length != sizes.length) ||
+          (uris.length != visibilities.length)) {
+        throw new IllegalArgumentException("Invalid specification for " +
+            "distributed-cache artifacts of type " + type + " :" +
+            " #uris=" + uris.length +
+            " #timestamps=" + timestamps.length +
+            " #visibilities=" + visibilities.length
+            );
       }
       
       for (int i = 0; i < uris.length; ++i) {
