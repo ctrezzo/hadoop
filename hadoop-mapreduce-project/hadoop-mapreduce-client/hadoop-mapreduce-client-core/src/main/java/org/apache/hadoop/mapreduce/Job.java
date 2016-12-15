@@ -24,7 +24,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -1359,7 +1358,8 @@ public class Job extends JobContextImpl implements JobContext {
     if (scConfig.isSharedCacheLibjarsEnabled()) {
       String files =
           conf.get(MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE);
-          conf.set(MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE,
+      conf.set(
+          MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE,
           files == null ? resource.toString() : files + ","
               + resource.toString());
       return true;
@@ -1430,7 +1430,7 @@ public class Job extends JobContextImpl implements JobContext {
 
   // We use a double colon because a colon is a reserved character in a URI and
   // there should not be two colons next to each other.
-  private static String PAIR_DELIM = "::";
+  private static final String DELIM = "::";
 
   /**
    * Serialize a set of shared cache upload policies into a config parameter.
@@ -1451,14 +1451,14 @@ public class Job extends JobContextImpl implements JobContext {
       Map.Entry<String, Boolean> e;
       if (it.hasNext()) {
         e = it.next();
-        sb.append(e.getKey()).append(PAIR_DELIM).append(e.getValue());
+        sb.append(e.getKey()).append(DELIM).append(e.getValue());
       } else {
         // policies is an empty map, just skip setting the parameter
         return;
       }
       while (it.hasNext()) {
         e = it.next();
-        sb.append(",").append(e.getKey()).append(PAIR_DELIM)
+        sb.append(",").append(e.getKey()).append(DELIM)
             .append(e.getValue());
       }
       String confParam =
@@ -1489,7 +1489,7 @@ public class Job extends JobContextImpl implements JobContext {
     String[] policy;
     Map<String, Boolean> policyMap = new HashMap<String, Boolean>();
     for (String s : policies) {
-      policy = s.split(PAIR_DELIM);
+      policy = s.split(DELIM);
       if (policy.length != 2) {
         throw new InvalidJobConfException(confParam
             + " is mis-formatted. Error on [" + s + "]");

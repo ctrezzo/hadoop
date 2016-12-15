@@ -573,7 +573,7 @@ public class MRApps extends Apps {
       Configuration conf,
       Map<String, LocalResource> localResources,
       LocalResourceType type,
-      URI[] uris, long[] timestamps, long[] sizes, boolean visibilities[],
+      URI[] uris, long[] timestamps, long[] sizes, boolean[] visibilities,
       Map<String, Boolean> sharedCacheUploadPolicies) throws IOException {
 
     if (uris != null) {

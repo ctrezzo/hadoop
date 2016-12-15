@@ -60,6 +60,9 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+/**
+ * Tests the JobResourceUploader class.
+ */
 public class TestJobResourceUploader {
   protected static final Log LOG = LogFactory
       .getLog(TestJobResourceUploader.class);
@@ -67,10 +70,10 @@ public class TestJobResourceUploader {
   private static FileSystem localFs;
   private static FileSystem remoteFs;
   private static Configuration conf = new Configuration();
-  private static Path TEST_ROOT_DIR;
+  private static Path testRootDir;
   private static Path remoteStagingDir =
       new Path(MRJobConfig.DEFAULT_MR_AM_STAGING_DIR);
-  protected String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
+  private String input = "roses.are.red\nviolets.are.blue\nbunnies.are.pink\n";
 
   @Before
   public void cleanup() throws Exception {
@@ -81,7 +84,7 @@ public class TestJobResourceUploader {
   public static void setup() throws IOException {
     // create configuration, dfs, file system
     localFs = FileSystem.getLocal(conf);
-    TEST_ROOT_DIR =
+    testRootDir =
         new Path("target", TestJobResourceUploader.class.getName() + "-tmpDir")
             .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
     dfs = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
@@ -101,7 +104,7 @@ public class TestJobResourceUploader {
         dfs.shutdown();
       }
     } catch (IOException ioe) {
-      LOG.info("IO exception in closing file system)" );
+      LOG.info("IO exception in closing file system");
       ioe.printStackTrace();
     }
   }
@@ -145,7 +148,7 @@ public class TestJobResourceUploader {
     }
 
     @Override
-    protected SharedCacheClient createSharedCacheClient(Configuration conf) {
+    protected SharedCacheClient createSharedCacheClient(Configuration c) {
       // Feed the mocked SharedCacheClient into the FileUploader logic
       return mockscClient;
     }
@@ -158,7 +161,7 @@ public class TestJobResourceUploader {
     job.setJobID(new JobID("application_1234_5678", 1));
 
     // shared cache is disabled by default
-    uploadFilesToRemoteFS(job, jobConf, 0, 0, 0, 0, false);
+    uploadFilesToRemoteFS(job, jobConf, 0, 0, 0, false);
 
   }
 
@@ -172,7 +175,7 @@ public class TestJobResourceUploader {
     // shared cache is enabled for every file type
     // the # of times SharedCacheClient.use is called should ==
     // total # of files/libjars/archive/jobjar
-    uploadFilesToRemoteFS(job, jobConf, 8, 2, 3, 2, false);
+    uploadFilesToRemoteFS(job, jobConf, 8, 3, 2, false);
   }
 
   @Test
@@ -186,7 +189,7 @@ public class TestJobResourceUploader {
     // shared cache is enabled for every file type
     // the # of times SharedCacheClient.use is called should ==
     // total # of files/libjars/archive/jobjar
-    uploadFilesToRemoteFS(job, jobConf, 8, 3, 3, 2, true);
+    uploadFilesToRemoteFS(job, jobConf, 8, 3, 2, true);
   }
 
   @Test
@@ -199,7 +202,7 @@ public class TestJobResourceUploader {
     // shared cache is enabled for archives and libjars type
     // the # of times SharedCacheClient.use is called should ==
     // total # of libjars and archives
-    ;
+    uploadFilesToRemoteFS(job, jobConf, 5, 1, 2, true);
   }
 
   private JobConf createJobConf() {
@@ -207,7 +210,8 @@ public class TestJobResourceUploader {
     jobConf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
     jobConf.setBoolean(YarnConfiguration.SHARED_CACHE_ENABLED, true);
 
-    jobConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, remoteFs.getUri().toString());
+    jobConf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, remoteFs.getUri()
+        .toString());
     return jobConf;
   }
 
@@ -226,10 +230,10 @@ public class TestJobResourceUploader {
   }
 
   private void uploadFilesToRemoteFS(Job job, JobConf jobConf,
-     int useCallCountExpected, int cachedFileCountExpected,
-     int numOfFilesShouldBeUploadedToSharedCacheExpected,
-     int numOfArchivesShouldBeUploadedToSharedCacheExpected,
-     boolean jobJarInSharedCacheBeforeUpload) throws Exception {
+      int useCallCountExpected,
+      int numOfFilesShouldBeUploadedToSharedCacheExpected,
+      int numOfArchivesShouldBeUploadedToSharedCacheExpected,
+      boolean jobJarInSharedCacheBeforeUpload) throws Exception {
     MyFileUploader fileUploader = new MyFileUploader(remoteFs, jobConf);
     SharedCacheConfig sharedCacheConfig = new SharedCacheConfig();
     sharedCacheConfig.init(jobConf);
@@ -247,17 +251,19 @@ public class TestJobResourceUploader {
     jobConf.set("tmpfiles", secondFile.toString());
 
     // Create jars with a single file inside them.
-    Path firstJar = makeJar(new Path(TEST_ROOT_DIR, "distributed.first.jar"), 1);
-    Path secondJar = makeJar(new Path(TEST_ROOT_DIR, "distributed.second.jar"), 2);
+    Path firstJar = makeJar(new Path(testRootDir, "distributed.first.jar"), 1);
+    Path secondJar =
+        makeJar(new Path(testRootDir, "distributed.second.jar"), 2);
 
     // Verify duplicated contents can be handled properly.
-    Path thirdJar = new Path(TEST_ROOT_DIR, "distributed.third.jar");
+    Path thirdJar = new Path(testRootDir, "distributed.third.jar");
     localFs.copyFromLocalFile(secondJar, thirdJar);
 
     // make secondJar cache available
     makeJarAvailableInSharedCache(secondJar, fileUploader);
 
-    // Add libjars to job conf via distributed cache API as well as command line
+    // Add libjars to job conf via distributed cache API as well as command
+    // line
     boolean libjarAdded =
         Job.addFileToSharedCacheAndClasspath(firstJar.toUri(), jobConf);
     assertEquals(sharedCacheConfig.isSharedCacheLibjarsEnabled(), libjarAdded);
@@ -271,10 +277,12 @@ public class TestJobResourceUploader {
     Path firstArchive = makeArchive("first-archive.zip", "first-file");
     Path secondArchive = makeArchive("second-archive.zip", "second-file");
 
-    // Add archives to job conf via distributed cache API as well as command line
+    // Add archives to job conf via distributed cache API as well as command
+    // line
     boolean archiveAdded =
         Job.addArchiveToSharedCache(firstArchive.toUri(), jobConf);
-    assertEquals(sharedCacheConfig.isSharedCacheArchivesEnabled(), archiveAdded);
+    assertEquals(sharedCacheConfig.isSharedCacheArchivesEnabled(),
+        archiveAdded);
     if (!archiveAdded) {
       Path remoteArchive = copyToRemote(firstArchive);
       job.addCacheArchive(remoteArchive.toUri());
@@ -283,7 +291,7 @@ public class TestJobResourceUploader {
     jobConf.set("tmparchives", secondArchive.toString());
 
     // Add job jar to job conf
-    Path jobJar = makeJar(new Path(TEST_ROOT_DIR, "test-job.jar"), 4);
+    Path jobJar = makeJar(new Path(testRootDir, "test-job.jar"), 4);
     if (jobJarInSharedCacheBeforeUpload) {
       makeJarAvailableInSharedCache(jobJar, fileUploader);
     }
@@ -298,6 +306,7 @@ public class TestJobResourceUploader {
     Map<String, Boolean> filesSharedCacheUploadPolicies =
         Job.getFileSharedCacheUploadPolicies(jobConf);
     for (Boolean policy : filesSharedCacheUploadPolicies.values()) {
+      LOG.info("CHRIS: " + policy);
       if (policy) {
         numOfFilesShouldBeUploadedToSharedCache++;
       }
@@ -328,7 +337,7 @@ public class TestJobResourceUploader {
 
   private Path createTempFile(String filename, String contents)
       throws IOException {
-    Path path = new Path(TEST_ROOT_DIR, filename);
+    Path path = new Path(testRootDir, filename);
     FSDataOutputStream os = localFs.create(path);
     os.writeBytes(contents);
     os.close();
@@ -350,9 +359,10 @@ public class TestJobResourceUploader {
     return p;
   }
 
-  private Path makeArchive(String archiveFile, String filename) throws Exception{
-    Path archive = new Path(TEST_ROOT_DIR, archiveFile);
-    Path file = new Path(TEST_ROOT_DIR, filename);
+  private Path makeArchive(String archiveFile, String filename)
+      throws Exception {
+    Path archive = new Path(testRootDir, archiveFile);
+    Path file = new Path(testRootDir, filename);
     DataOutputStream out = localFs.create(archive);
     ZipOutputStream zos = new ZipOutputStream(out);
     ZipEntry ze = new ZipEntry(file.toString());

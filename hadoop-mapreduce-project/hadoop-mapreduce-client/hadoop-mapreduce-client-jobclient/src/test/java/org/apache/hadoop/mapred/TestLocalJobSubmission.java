@@ -133,7 +133,7 @@ public class TestLocalJobSubmission {
   }
 
   /**
-   * Test local job submission with a file option
+   * Test local job submission with a file option.
    *
    * @throws IOException
    */
@@ -145,8 +145,8 @@ public class TestLocalJobSubmission {
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost:9000");
     conf.set(MRConfig.FRAMEWORK_NAME, "local");
     final String[] args =
-        { "-jt", "local", "-files", jarPath.toString(), "-m", "1", "-r", "1",
-            "-mt", "1", "-rt", "1" };
+        {"-jt", "local", "-files", jarPath.toString(), "-m", "1", "-r", "1",
+            "-mt", "1", "-rt", "1"};
     int res = -1;
     try {
       res = ToolRunner.run(conf, new SleepJob(), args);
@@ -159,7 +159,7 @@ public class TestLocalJobSubmission {
   }
 
   /**
-   * Test local job submission with an archive option
+   * Test local job submission with an archive option.
    *
    * @throws IOException
    */
@@ -171,8 +171,8 @@ public class TestLocalJobSubmission {
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost:9000");
     conf.set(MRConfig.FRAMEWORK_NAME, "local");
     final String[] args =
-        { "-jt", "local", "-archives", jarPath.toString(), "-m", "1", "-r",
-            "1", "-mt", "1", "-rt", "1" };
+        {"-jt", "local", "-archives", jarPath.toString(), "-m", "1", "-r",
+            "1", "-mt", "1", "-rt", "1"};
     int res = -1;
     try {
       res = ToolRunner.run(conf, new SleepJob(), args);

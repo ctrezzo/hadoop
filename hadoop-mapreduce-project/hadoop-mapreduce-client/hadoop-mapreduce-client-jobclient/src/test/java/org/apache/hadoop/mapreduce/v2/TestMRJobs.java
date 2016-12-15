@@ -1394,6 +1394,9 @@ public class TestMRJobs {
         trackingUrl.endsWith(jobId.substring(jobId.lastIndexOf("_")) + "/"));
   }
 
+  /**
+   * An identity mapper for testing the shared cache.
+   */
   public static class SharedCacheChecker extends
       Mapper<LongWritable, Text, NullWritable, NullWritable> {
     @Override

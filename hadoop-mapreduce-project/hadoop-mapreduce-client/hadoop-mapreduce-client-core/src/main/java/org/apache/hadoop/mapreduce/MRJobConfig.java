@@ -193,27 +193,25 @@ public interface MRJobConfig {
    * LocalResourceVisibility.PUBLIC. If set to false, the visibility will be set
    * to LocalResourceVisibility.APPLICATION.
    */
-  public static final String JOBJAR_VISIBILITY =
-      "mapreduce.job.jobjar.visibility";
-  public static final boolean JOBJAR_VISIBILITY_DEFAULT = false;
+  String JOBJAR_VISIBILITY = "mapreduce.job.jobjar.visibility";
+  boolean JOBJAR_VISIBILITY_DEFAULT = false;
 
-  public static final String JOBJAR_SHARED_CACHE_UPLOAD_POLICY =
+  String JOBJAR_SHARED_CACHE_UPLOAD_POLICY =
       "mapreduce.job.jobjar.sharedcache.uploadpolicy";
-  public static final boolean JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT = false;
+  boolean JOBJAR_SHARED_CACHE_UPLOAD_POLICY_DEFAULT = false;
 
-  public static final String CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES =
+  String CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES =
       "mapreduce.job.cache.files.sharedcache.uploadpolicies";
 
-  public static final String CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES =
+  String CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES =
       "mapreduce.job.cache.archives.sharedcache.uploadpolicies";
 
-  public static final String FILES_FOR_SHARED_CACHE =
-      "mapreduce.job.cache.sharedcache.files";
+  String FILES_FOR_SHARED_CACHE = "mapreduce.job.cache.sharedcache.files";
 
-  public static final String FILES_FOR_CLASSPATH_AND_SHARED_CACHE =
+  String FILES_FOR_CLASSPATH_AND_SHARED_CACHE =
       "mapreduce.job.cache.sharedcache.files.addtoclasspath";
 
-  public static final String ARCHIVES_FOR_SHARED_CACHE =
+  String ARCHIVES_FOR_SHARED_CACHE =
       "mapreduce.job.cache.sharedcache.archives";
 
   /**
@@ -223,10 +221,9 @@ public interface MRJobConfig {
    * files, archives. If "disabled" is specified then all categories are
    * disabled. If "enabled" is specified then all categories are enabled.
    */
-  public static final String SHARED_CACHE_MODE =
-      "mapreduce.job.sharedcache.mode";
+  String SHARED_CACHE_MODE = "mapreduce.job.sharedcache.mode";
 
-  public static final String SHARED_CACHE_MODE_DEFAULT = "disabled";
+  String SHARED_CACHE_MODE_DEFAULT = "disabled";
 
   /**
    * @deprecated Symlinks are always on and cannot be disabled.

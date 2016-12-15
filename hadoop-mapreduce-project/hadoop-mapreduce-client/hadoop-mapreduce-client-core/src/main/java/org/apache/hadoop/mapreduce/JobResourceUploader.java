@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -154,10 +155,9 @@ class JobResourceUploader {
     Collection<String> files = conf.getStringCollection("tmpfiles");
     Collection<String> libjars = conf.getStringCollection("tmpjars");
     Collection<String> archives = conf.getStringCollection("tmparchives");
-    Collection<String> dcFiles =
+    Collection<String> dcResources =
         conf.getStringCollection(MRJobConfig.CACHE_FILES);
-    Collection<String> dcArchives =
-        conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES);
+    dcResources.addAll(conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES));
     String jobJar = job.getJar();
 
     // Merge resources that have already been specified for the shared cache
@@ -170,8 +170,8 @@ class JobResourceUploader {
 
 
     Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
-    checkLocalizationLimits(conf, files, libjars, archives, jobJar, dcFiles,
-        dcArchives, statCache);
+    checkLocalizationLimits(conf, files, libjars, archives, jobJar,
+        dcResources, statCache);
 
     Map<String, Boolean> fileSCUploadPolicies = new HashMap<String, Boolean>();
     Map<String, Boolean> archiveSCUploadPolicies =
@@ -242,7 +242,7 @@ class JobResourceUploader {
             // handle a path that has been specified multiple times
             Boolean previousPolicy =
                 fileSCUploadPolicies.get(pathURI.toString());
-            if (previousPolicy == null || previousPolicy == false) {
+            if (previousPolicy == null || !previousPolicy) {
               fileSCUploadPolicies.put(pathURI.toString(), uploadToSharedCache);
             }
           }
@@ -296,7 +296,7 @@ class JobResourceUploader {
           // handle a path that has been specified multiple times
           String pathUriString = newPath.toUri().toString();
           Boolean previousPolicy = fileSCUploadPolicies.get(pathUriString);
-          if (previousPolicy == null || previousPolicy == false) {
+          if (previousPolicy == null || !previousPolicy) {
             fileSCUploadPolicies.put(pathUriString, uploadToSharedCache);
           }
         }
@@ -353,7 +353,7 @@ class JobResourceUploader {
             // handle a path that has been specified multiple times
             Boolean previousPolicy =
                 archiveSCUploadPolicies.get(pathURI.toString());
-            if (previousPolicy == null || previousPolicy == false) {
+            if (previousPolicy == null || !previousPolicy) {
               archiveSCUploadPolicies.put(pathURI.toString(),
                   uploadToSharedCache);
             }
@@ -436,8 +436,8 @@ class JobResourceUploader {
   @VisibleForTesting
   void checkLocalizationLimits(Configuration conf, Collection<String> files,
       Collection<String> libjars, Collection<String> archives, String jobJar,
-      Collection<String> dcFiles, Collection<String> dcArchives,
-      Map<URI, FileStatus> statCache) throws IOException {
+      Collection<String> dcResources, Map<URI, FileStatus> statCache)
+      throws IOException {
 
     LimitChecker limitChecker = new LimitChecker(conf);
     if (!limitChecker.hasLimits()) {
@@ -445,11 +445,7 @@ class JobResourceUploader {
       return;
     }
 
-    for (String path : dcFiles) {
-      explorePath(conf, new Path(path), limitChecker, statCache);
-    }
-
-    for (String path : dcArchives) {
+    for (String path : dcResources) {
       explorePath(conf, new Path(path), limitChecker, statCache);
     }
 
