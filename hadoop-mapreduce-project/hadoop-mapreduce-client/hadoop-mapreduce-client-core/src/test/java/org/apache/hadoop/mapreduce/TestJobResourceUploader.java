@@ -161,14 +161,11 @@ public class TestJobResourceUploader {
     when(mockedStatus.isDirectory()).thenReturn(false);
     Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
     try {
-      Collection<String> dcResources =
-          conf.getStringCollection(MRJobConfig.CACHE_FILES);
-      dcResources.addAll(conf.getStringCollection(MRJobConfig.CACHE_ARCHIVES));
       uploader.checkLocalizationLimits(conf,
           conf.getStringCollection("tmpfiles"),
           conf.getStringCollection("tmpjars"),
-          conf.getStringCollection("tmparchives"), conf.getJar(), dcResources,
-          statCache);
+          conf.getStringCollection("tmparchives"),
+          conf.getJar(), statCache);
       Assert.assertTrue("Limits check succeeded when it should have failed.",
           checkShouldSucceed);
     } catch (IOException e) {
