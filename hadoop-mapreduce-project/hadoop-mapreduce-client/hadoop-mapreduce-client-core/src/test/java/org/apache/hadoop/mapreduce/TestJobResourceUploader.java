@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
