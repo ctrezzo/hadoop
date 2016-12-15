@@ -306,7 +306,6 @@ public class TestJobResourceUploaderWithSharedCache {
     Map<String, Boolean> filesSharedCacheUploadPolicies =
         Job.getFileSharedCacheUploadPolicies(jobConf);
     for (Boolean policy : filesSharedCacheUploadPolicies.values()) {
-      LOG.info("CHRIS: " + policy);
       if (policy) {
         numOfFilesShouldBeUploadedToSharedCache++;
       }
