@@ -85,7 +85,8 @@ public class TestJobResourceUploaderWithSharedCache {
     // create configuration, dfs, file system
     localFs = FileSystem.getLocal(conf);
     testRootDir =
-        new Path("target", TestJobResourceUploaderWithSharedCache.class.getName() + "-tmpDir")
+        new Path("target",
+            TestJobResourceUploaderWithSharedCache.class.getName() + "-tmpDir")
             .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
     dfs = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
     remoteFs = dfs.getFileSystem();
