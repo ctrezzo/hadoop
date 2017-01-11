@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -113,8 +115,24 @@ public class TestSharedCacheClientImpl {
     response.setPath(file.toString());
     when(cProtocol.use(isA(UseSharedCacheResourceRequest.class))).thenReturn(
         response);
-    Path newPath = client.use(mock(ApplicationId.class), "key");
-    assertEquals(file, newPath);
+    Path newPath = client.use(mock(ApplicationId.class), "key", null);
+    assertTrue("The paths are not equal! Expected:<" + file + ">, Actual:<"
+        + newPath + ">", newPath.equals(file));
+  }
+
+  @Test
+  public void testUseWithResourceName() throws Exception {
+    Path file = new Path("viewfs://test/path");
+    URI useUri = new URI("viewfs://test/path#linkName");
+    Path usePath = new Path(useUri);
+    UseSharedCacheResourceResponse response =
+        new UseSharedCacheResourceResponsePBImpl();
+    response.setPath(file.toString());
+    when(cProtocol.use(isA(UseSharedCacheResourceRequest.class))).thenReturn(
+        response);
+    Path newPath = client.use(mock(ApplicationId.class), "key", "linkName");
+    assertTrue("The paths are not equal! Expected:<" + usePath + ">, Actual:<"
+        + newPath + ">", newPath.equals(usePath));
   }
 
   @Test(expected = YarnException.class)
@@ -122,7 +140,7 @@ public class TestSharedCacheClientImpl {
     String message = "Mock IOExcepiton!";
     when(cProtocol.use(isA(UseSharedCacheResourceRequest.class))).thenThrow(
         new IOException(message));
-    client.use(mock(ApplicationId.class), "key");
+    client.use(mock(ApplicationId.class), "key", null);
   }
 
   @Test

@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -111,8 +113,8 @@ public class SharedCacheClientImpl extends SharedCacheClient {
   }
 
   @Override
-  public Path use(ApplicationId applicationId, String resourceKey)
-      throws YarnException {
+  public Path use(ApplicationId applicationId, String resourceKey,
+      String resourceName) throws YarnException {
     Path resourcePath = null;
     UseSharedCacheResourceRequest request = Records.newRecord(
         UseSharedCacheResourceRequest.class);
@@ -128,6 +130,20 @@ public class SharedCacheClientImpl extends SharedCacheClient {
       // RPC call can throw ConnectionException.
       // We don't handle different exceptions separately at this point.
       throw new YarnException(e);
+    }
+    if (resourceName != null && resourcePath != null) {
+      // We are using the shared cache, and a preferred name has been specified.
+      // We need to set the fragment portion of the URI to preserve the desired
+      // name.
+      URI pathURI = resourcePath.toUri();
+      try {
+        // We assume that there is no existing fragment in the URI since the
+        // shared cache manager does not use fragments.
+        pathURI = new URI(pathURI.toString() + "#" + resourceName);
+        resourcePath = new Path(pathURI);
+      } catch (URISyntaxException e) {
+        throw new YarnException(e);
+      }
     }
     return resourcePath;
   }
