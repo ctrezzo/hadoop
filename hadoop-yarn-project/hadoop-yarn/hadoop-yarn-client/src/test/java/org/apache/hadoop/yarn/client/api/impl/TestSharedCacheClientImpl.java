@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -116,8 +115,7 @@ public class TestSharedCacheClientImpl {
     when(cProtocol.use(isA(UseSharedCacheResourceRequest.class))).thenReturn(
         response);
     Path newPath = client.use(mock(ApplicationId.class), "key", null);
-    assertTrue("The paths are not equal! Expected:<" + file + ">, Actual:<"
-        + newPath + ">", newPath.equals(file));
+    assertEquals("The paths are not equal!", file, newPath);
   }
 
   @Test
@@ -131,8 +129,7 @@ public class TestSharedCacheClientImpl {
     when(cProtocol.use(isA(UseSharedCacheResourceRequest.class))).thenReturn(
         response);
     Path newPath = client.use(mock(ApplicationId.class), "key", "linkName");
-    assertTrue("The paths are not equal! Expected:<" + usePath + ">, Actual:<"
-        + newPath + ">", newPath.equals(usePath));
+    assertEquals("The paths are not equal!", usePath, newPath);
   }
 
   @Test(expected = YarnException.class)

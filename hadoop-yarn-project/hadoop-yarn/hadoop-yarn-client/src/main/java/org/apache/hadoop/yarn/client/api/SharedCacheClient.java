@@ -64,12 +64,10 @@ public abstract class SharedCacheClient extends AbstractService {
    * </p>
    * 
    * <p>
-   * Additionally, a name for the resource can be specified. If the underlying
-   * path returned from the shared cache has a different name, then a fragment
-   * will be added to the path with the desired name. This ensures that if the
+   * Additionally, a name for the resource should be specified. A fragment will
+   * be added to the path with the desired name. This ensures that if the
    * returned path is used to create a LocalResource, then the symlink created
-   * during YARN localization will match the name specified. If null is
-   * specified, then no fragment is added.
+   * during YARN localization will match the name specified.
    * </p>
    *
    * @param applicationId ApplicationId of the application using the resource

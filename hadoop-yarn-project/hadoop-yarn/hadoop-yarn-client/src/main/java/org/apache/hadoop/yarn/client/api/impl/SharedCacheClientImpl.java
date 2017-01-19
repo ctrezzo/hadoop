@@ -131,7 +131,7 @@ public class SharedCacheClientImpl extends SharedCacheClient {
       // We don't handle different exceptions separately at this point.
       throw new YarnException(e);
     }
-    if (resourceName != null && resourcePath != null) {
+    if (resourcePath != null) {
       // We are using the shared cache, and a preferred name has been specified.
       // We need to set the fragment portion of the URI to preserve the desired
       // name.
@@ -139,10 +139,14 @@ public class SharedCacheClientImpl extends SharedCacheClient {
       try {
         // We assume that there is no existing fragment in the URI since the
         // shared cache manager does not use fragments.
-        pathURI = new URI(pathURI.toString() + "#" + resourceName);
+        pathURI =
+            new URI(pathURI.getScheme(), pathURI.getSchemeSpecificPart(),
+                resourceName);
         resourcePath = new Path(pathURI);
       } catch (URISyntaxException e) {
-        throw new YarnException(e);
+        throw new YarnException(
+            "Could not create a new URI due to syntax errors: "
+                + pathURI.toString(), e);
       }
     }
     return resourcePath;
