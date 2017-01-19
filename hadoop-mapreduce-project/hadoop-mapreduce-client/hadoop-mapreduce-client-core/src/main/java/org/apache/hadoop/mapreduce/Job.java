@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -1399,13 +1399,14 @@ public class Job extends JobContextImpl implements JobContext {
   }
 
   /**
-   * This is to set the shared cache upload policies for files.
+   * This is to set the shared cache upload policies for files. If the parameter
+   * was previously set, this method will replace the old value with the new
+   * provided map.
    *
    * @param conf Configuration which stores the shared cache upload policies
-   * @param policies A map containing the shared cache upload policies for a
-   *          set of resources. The key is the url of the resource and the
-   *          value is the upload policy. True if it should be uploaded,
-   *          false otherwise.
+   * @param policies A map containing the shared cache upload policies for a set
+   *          of resources. The key is the url of the resource and the value is
+   *          the upload policy. True if it should be uploaded, false otherwise.
    */
   @Unstable
   public static void setFileSharedCacheUploadPolicies(Configuration conf,
@@ -1414,13 +1415,14 @@ public class Job extends JobContextImpl implements JobContext {
   }
 
   /**
-   * This is to set the shared cache upload policies for archives.
+   * This is to set the shared cache upload policies for archives. If the
+   * parameter was previously set, this method will replace the old value with
+   * the new provided map.
    *
    * @param conf Configuration which stores the shared cache upload policies
-   * @param policies A map containing the shared cache upload policies for a
-   *          set of resources. The key is the url of the resource and the
-   *          value is the upload policy. True if it should be uploaded,
-   *          false otherwise.
+   * @param policies A map containing the shared cache upload policies for a set
+   *          of resources. The key is the url of the resource and the value is
+   *          the upload policy. True if it should be uploaded, false otherwise.
    */
   @Unstable
   public static void setArchiveSharedCacheUploadPolicies(Configuration conf,
@@ -1433,15 +1435,17 @@ public class Job extends JobContextImpl implements JobContext {
   private static final String DELIM = "::";
 
   /**
-   * Serialize a set of shared cache upload policies into a config parameter.
+   * Set the shared cache upload policies config parameter. This is done by
+   * serializing the provided map of shared cache upload policies into a config
+   * parameter. If the parameter was previously set, this method will replace
+   * the old value with the new provided map.
    *
    * @param conf Configuration which stores the shared cache upload policies
-   * @param policies A map containing the shared cache upload policies for a
-   *          set of resources. The key is the url of the resource and the
-   *          value is the upload policy. True if it should be uploaded, false
-   *          otherwise.
-   * @param areFiles True if these policies are for files, false if they are
-   *          for archives.
+   * @param policies A map containing the shared cache upload policies for a set
+   *          of resources. The key is the url of the resource and the value is
+   *          the upload policy. True if it should be uploaded, false otherwise.
+   * @param areFiles True if these policies are for files, false if they are for
+   *          archives.
    */
   private static void setSharedCacheUploadPolicies(Configuration conf,
       Map<String, Boolean> policies, boolean areFiles) {
@@ -1451,15 +1455,14 @@ public class Job extends JobContextImpl implements JobContext {
       Map.Entry<String, Boolean> e;
       if (it.hasNext()) {
         e = it.next();
-        sb.append(e.getKey()).append(DELIM).append(e.getValue());
+        sb.append(e.getKey() + DELIM + e.getValue());
       } else {
         // policies is an empty map, just skip setting the parameter
         return;
       }
       while (it.hasNext()) {
         e = it.next();
-        sb.append(",").append(e.getKey()).append(DELIM)
-            .append(e.getValue());
+        sb.append("," + e.getKey() + DELIM + e.getValue());
       }
       String confParam =
           areFiles ? MRJobConfig.CACHE_FILES_SHARED_CACHE_UPLOAD_POLICIES
@@ -1469,16 +1472,16 @@ public class Job extends JobContextImpl implements JobContext {
   }
 
   /**
-   * Deserialize a set of shared cache upload policies from a config parameter.
+   * Deserialize a map of shared cache upload policies from a config parameter.
    *
    * @param conf Configuration which stores the shared cache upload policies
-   * @param areFiles True if these policies are for files, false if they are
-   *         for archives.
+   * @param areFiles True if these policies are for files, false if they are for
+   *          archives.
    * @return A map containing the shared cache upload policies for a set of
    *         resources. The key is the url of the resource and the value is the
    *         upload policy. True if it should be uploaded, false otherwise.
    * @throws InvalidJobConfException if the shared cache upload policies
-   *         parameter has an invalid format.
+   *           parameter has an invalid format.
    */
   private static Map<String, Boolean> getSharedCacheUploadPolicies(
       Configuration conf, boolean areFiles) throws InvalidJobConfException {
@@ -1487,7 +1490,7 @@ public class Job extends JobContextImpl implements JobContext {
             : MRJobConfig.CACHE_ARCHIVES_SHARED_CACHE_UPLOAD_POLICIES;
     Collection<String> policies = conf.getStringCollection(confParam);
     String[] policy;
-    Map<String, Boolean> policyMap = new HashMap<String, Boolean>();
+    Map<String, Boolean> policyMap = new LinkedHashMap<String, Boolean>();
     for (String s : policies) {
       policy = s.split(DELIM);
       if (policy.length != 2) {

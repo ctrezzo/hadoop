@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -151,13 +152,15 @@ class JobResourceUploader {
         new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
     FileSystem.mkdirs(jtFs, submitJobDir, mapredSysPerms);
 
+    // Get the resources that have been added via command line arguments in the
+    // GenericOptionsParser (i.e. files, libjars, archives).
     Collection<String> files = conf.getStringCollection("tmpfiles");
     Collection<String> libjars = conf.getStringCollection("tmpjars");
     Collection<String> archives = conf.getStringCollection("tmparchives");
     String jobJar = job.getJar();
 
-    // Merge resources that have already been specified for the shared cache
-    // via conf.
+    // Merge resources that have been programmatically specified for the shared
+    // cache via the Job API.
     files.addAll(conf.getStringCollection(MRJobConfig.FILES_FOR_SHARED_CACHE));
     libjars.addAll(conf.getStringCollection(
             MRJobConfig.FILES_FOR_CLASSPATH_AND_SHARED_CACHE));
@@ -168,9 +171,10 @@ class JobResourceUploader {
     Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
     checkLocalizationLimits(conf, files, libjars, archives, jobJar, statCache);
 
-    Map<String, Boolean> fileSCUploadPolicies = new HashMap<String, Boolean>();
+    Map<String, Boolean> fileSCUploadPolicies =
+        new LinkedHashMap<String, Boolean>();
     Map<String, Boolean> archiveSCUploadPolicies =
-        new HashMap<String, Boolean>();
+        new LinkedHashMap<String, Boolean>();
 
     uploadFiles(job, files, submitJobDir, mapredSysPerms, replication,
         fileSCUploadPolicies, statCache);
@@ -216,8 +220,9 @@ class JobResourceUploader {
         boolean uploadToSharedCache = false;
         if (scConfig.isSharedCacheFilesEnabled()) {
           if (getFileStatus(statCache, conf, tmp).isDirectory()) {
-            LOG.warn("Shared cache does not support directories."
-                + " Will not upload " + tmp + " to the shared cache.");
+            LOG.warn("Shared cache does not support directories"
+                + " (see YARN-6097)." + " Will not upload " + tmp
+                + " to the shared cache.");
           } else {
             newPath = useSharedCache(tmp, conf);
             if (newPath == null) {
@@ -234,12 +239,7 @@ class JobResourceUploader {
           URI pathURI = getPathURI(newPath, tmpURI.getFragment());
           job.addCacheFile(pathURI);
           if (scConfig.isSharedCacheFilesEnabled()) {
-            // handle a path that has been specified multiple times
-            Boolean previousPolicy =
-                fileSCUploadPolicies.get(pathURI.toString());
-            if (previousPolicy == null || !previousPolicy) {
-              fileSCUploadPolicies.put(pathURI.toString(), uploadToSharedCache);
-            }
+            fileSCUploadPolicies.put(pathURI.toString(), uploadToSharedCache);
           }
         } catch (URISyntaxException ue) {
           // should not throw a uri exception
@@ -257,23 +257,22 @@ class JobResourceUploader {
     Path libjarsDir = JobSubmissionFiles.getJobDistCacheLibjars(submitJobDir);
     if (!libjars.isEmpty()) {
       FileSystem.mkdirs(jtFs, libjarsDir, mapredSysPerms);
-      boolean addIndividualToDistributedCache = !useWildcard;
-      if (scConfig.isSharedCacheLibjarsEnabled()) {
-        // Shared cache does not support wildcards for libjars directory yet
-        addIndividualToDistributedCache = true;
-      }
       for (String tmpjars : libjars) {
         Path tmp = new Path(tmpjars);
         Path newPath = null;
         boolean uploadToSharedCache = false;
+        boolean fromSharedCache = false;
         if (scConfig.isSharedCacheLibjarsEnabled()) {
           if (getFileStatus(statCache, conf, tmp).isDirectory()) {
             LOG.warn("Shared cache does not support directories."
-                + " Will not upload " + tmp + " to the shared cache.");
+                + " (see YARN-6097)." + " Will not upload " + tmp
+                + " to the shared cache.");
           } else {
             newPath = useSharedCache(tmp, conf);
             if (newPath == null) {
               uploadToSharedCache = true;
+            } else {
+              fromSharedCache = true;
             }
           }
         }
@@ -283,21 +282,16 @@ class JobResourceUploader {
         }
 
         // Add each file to the classpath
-        job.addFileToClassPath(newPath);
-        if (addIndividualToDistributedCache) {
-          job.addCacheFile(newPath.toUri());
-        }
+        DistributedCache.addFileToClassPath(
+            new Path(newPath.toUri().getPath()), conf, jtFs,
+            (fromSharedCache || !useWildcard));
         if (scConfig.isSharedCacheLibjarsEnabled()) {
-          // handle a path that has been specified multiple times
-          String pathUriString = newPath.toUri().toString();
-          Boolean previousPolicy = fileSCUploadPolicies.get(pathUriString);
-          if (previousPolicy == null || !previousPolicy) {
-            fileSCUploadPolicies.put(pathUriString, uploadToSharedCache);
-          }
+          fileSCUploadPolicies.put(newPath.toUri().toString(),
+              uploadToSharedCache);
         }
       }
 
-      if (!addIndividualToDistributedCache) {
+      if (useWildcard) {
         // Add the whole directory to the cache
         Path libJarsDirWildcard =
             jtFs.makeQualified(new Path(libjarsDir, DistributedCache.WILDCARD));
@@ -329,7 +323,8 @@ class JobResourceUploader {
         if (scConfig.isSharedCacheArchivesEnabled()) {
           if (getFileStatus(statCache, conf, tmp).isDirectory()) {
             LOG.warn("Shared cache does not support directories."
-                + " Will not upload " + tmp + " to the shared cache.");
+                + " (see YARN-6097)." + " Will not upload " + tmp
+                + " to the shared cache.");
           } else {
             newPath = useSharedCache(tmp, conf);
             if (newPath == null) {
@@ -345,13 +340,8 @@ class JobResourceUploader {
           URI pathURI = getPathURI(newPath, tmpURI.getFragment());
           job.addCacheArchive(pathURI);
           if (scConfig.isSharedCacheArchivesEnabled()) {
-            // handle a path that has been specified multiple times
-            Boolean previousPolicy =
-                archiveSCUploadPolicies.get(pathURI.toString());
-            if (previousPolicy == null || !previousPolicy) {
-              archiveSCUploadPolicies.put(pathURI.toString(),
-                  uploadToSharedCache);
-            }
+            archiveSCUploadPolicies
+                .put(pathURI.toString(), uploadToSharedCache);
           }
         } catch (URISyntaxException ue) {
           // should not throw an uri excpetion
@@ -384,8 +374,7 @@ class JobResourceUploader {
         if (scConfig.isSharedCacheJobjarEnabled()) {
           // We must have a qualified path for the shared cache client. We can
           // assume this is for the local filesystem
-          if (jobJarPath.toUri().getScheme() == null
-              || jobJarPath.toUri().getAuthority() == null) {
+          if (jobJarPath.toUri().getScheme() == null) {
             jobJarPath = FileSystem.getLocal(conf).makeQualified(jobJarPath);
           }
           newJarPath = useSharedCache(jobJarPath, conf);
