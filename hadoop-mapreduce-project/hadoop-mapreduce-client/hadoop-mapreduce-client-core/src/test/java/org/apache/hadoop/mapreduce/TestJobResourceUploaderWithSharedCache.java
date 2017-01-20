@@ -145,7 +145,8 @@ public class TestJobResourceUploaderWithSharedCache {
       // caller
       when(
           mockscClient.use(any(ApplicationId.class),
-              eq(scClient.getFileChecksum(localFile)))).thenReturn(remoteFile);
+              eq(scClient.getFileChecksum(localFile)), any(String.class)))
+          .thenReturn(remoteFile);
     }
 
     @Override
@@ -301,7 +302,7 @@ public class TestJobResourceUploaderWithSharedCache {
     fileUploader.uploadResources(job, remoteStagingDir);
 
     verify(fileUploader.mockscClient, times(useCallCountExpected)).use(
-        any(ApplicationId.class), anyString());
+        any(ApplicationId.class), anyString(), anyString());
 
     int numOfFilesShouldBeUploadedToSharedCache = 0;
     Map<String, Boolean> filesSharedCacheUploadPolicies =

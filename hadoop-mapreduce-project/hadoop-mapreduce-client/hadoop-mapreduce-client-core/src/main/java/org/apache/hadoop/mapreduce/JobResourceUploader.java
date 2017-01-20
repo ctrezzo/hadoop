@@ -597,9 +597,14 @@ class JobResourceUploader {
     // a resource, something is really wrong with the file system;
     // even non-SCM approach won't work. Let us just throw the exception.
     String checksum = scClient.getFileChecksum(sourceFile);
+    // Honor the fragment if provided, if there is no fragment then we use the
+    // name of the path for the symlink name.
+    String symlink =
+        (sourceFile.toUri().getFragment() == null) ? sourceFile.getName()
+            : sourceFile.toUri().getFragment();
     Path path = null;
     try {
-      path = scClient.use(this.appId, checksum);
+      path = scClient.use(this.appId, checksum, symlink);
     } catch (YarnException e) {
       LOG.warn("Error trying to contact the shared cache manager,"
           + " disabling the SCMClient for the rest of this job submission", e);
