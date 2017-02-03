@@ -132,21 +132,28 @@ public class SharedCacheClientImpl extends SharedCacheClient {
       throw new YarnException(e);
     }
     if (resourcePath != null) {
-      // We are using the shared cache, and a preferred name has been specified.
-      // We need to set the fragment portion of the URI to preserve the desired
-      // name.
-      URI pathURI = resourcePath.toUri();
-      try {
-        // We assume that there is no existing fragment in the URI since the
-        // shared cache manager does not use fragments.
-        pathURI =
-            new URI(pathURI.getScheme(), pathURI.getSchemeSpecificPart(),
-                resourceName);
-        resourcePath = new Path(pathURI);
-      } catch (URISyntaxException e) {
-        throw new YarnException(
-            "Could not create a new URI due to syntax errors: "
-                + pathURI.toString(), e);
+      if (resourcePath.getName().equals(resourceName)) {
+        // The preferred name is the same as the name of the item in the cache,
+        // so we skip generating the fragment to save space in the MRconfig.
+        return resourcePath;
+      } else {
+        // We are using the shared cache, and a preferred name has been
+        // specified that is different than the name of the resource in the
+        // shared cache. We need to set the fragment portion of the URI to
+        // preserve the desired name.
+        URI pathURI = resourcePath.toUri();
+        try {
+          // We assume that there is no existing fragment in the URI since the
+          // shared cache manager does not use fragments.
+          pathURI =
+              new URI(pathURI.getScheme(), pathURI.getSchemeSpecificPart(),
+                  resourceName);
+          resourcePath = new Path(pathURI);
+        } catch (URISyntaxException e) {
+          throw new YarnException(
+              "Could not create a new URI due to syntax errors: "
+                  + pathURI.toString(), e);
+        }
       }
     }
     return resourcePath;
