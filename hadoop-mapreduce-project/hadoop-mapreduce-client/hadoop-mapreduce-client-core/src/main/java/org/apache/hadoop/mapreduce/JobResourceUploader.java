@@ -67,7 +67,7 @@ class JobResourceUploader {
     this.scConfig.init(conf);
     if (this.scConfig.isSharedCacheEnabled()) {
       this.scClient = createSharedCacheClient(conf);
-      appId = ApplicationId.fromString(jobid.getJtIdentifier());
+      this.appId = jobid.toAppId();
     }
   }
 

@@ -26,6 +26,7 @@ import java.text.NumberFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 /**
  * JobID represents the immutable and unique identifier for 
@@ -156,5 +157,14 @@ public class JobID extends org.apache.hadoop.mapred.ID
     throw new IllegalArgumentException("JobId string : " + str 
         + " is not properly formed");
   }
-  
+
+  /**
+   * Return a yarn ApplicationId that represents this JobID.
+   *
+   * @return ApplicationId for this JobId.
+   */
+  public ApplicationId toAppId() {
+    return ApplicationId.newInstance(Long.parseLong(this.getJtIdentifier()),
+        this.getId());
+  }
 }
